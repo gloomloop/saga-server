@@ -1,0 +1,165 @@
+{
+  "name":"demo key puzzle",
+  "system_prompt_theme":"silent hill / survival horror / puzzle",
+  "win_condition":{
+    "event":"enter_room",
+    "room_name":"stairwell to roof"
+  },
+  "rooms":[
+    {
+      "name":"waiting room",
+      "description":"a dilapidated waiting room",
+      "connections":[
+        {
+          "direction":"east",
+          "door_name":"storage room door"
+        },
+        {
+          "direction":"west",
+          "door_name":"metal stairwell door"
+        },
+        {
+          "direction":"north",
+          "door_name":"office door"
+        }
+      ],
+      "items":[
+        {
+          "name":"tattered grey hoodie",
+          "description":"a tattered grey hoodie",
+          "location":"middle of the floor",
+          "conceals":{
+            "name":"ominous note",
+            "description":"a hastily scrawled note",
+            "detail":"<text>got to get away from that thing...</text>",
+            "portable":true
+          }
+        },
+        {
+          "name":"energy drink",
+          "description":"an unopened energy drink",
+          "detail":"<text>NRG-9001: unleash your inner beast</text>",
+          "health_effect":"weak"
+        }
+      ]
+    },
+    {
+      "name":"storage room",
+      "description":"a dusty storage room",
+      "connections":[
+        {
+          "direction":"west",
+          "door_name":"storage room door"
+        }
+      ],
+      "items":[
+        {
+          "name":"dark green tarp",
+          "description":"a dark green tarp",
+          "location":"floor",
+          "conceals":{
+            "name":"safe",
+            "description":"a safe with a keypad",
+            "detail":"fingerprints are visible, as if it's been handled recently",
+            "code":"2468",
+            "contains":{
+              "name":"iron key",
+              "description":"a mysterious iron key",
+              "detail":"the key is inscribed with a unfamiliar symbol",
+              "key":true
+            }
+          }
+        },
+        {
+          "name":"stack of newspapers",
+          "description":"a stack of old newspapers",
+          "detail":"the newspapers are dated to October 1998",
+          "location":"on the right side of the room"
+        },
+        {
+          "name":"filing cabinet",
+          "description":"a sturdy filing cabinet",
+          "location":"against the wall on the left",
+          "contains":"empty"
+        },
+        {
+          "name":"metal pipe",
+          "description":"a grimy metal pipe",
+          "detail":"it's better than nothing",
+          "location":"leaning against the filing cabinet",
+          "weapon_damage":0.7
+        }
+      ]
+    },
+    {
+      "name":"office",
+      "description":"a cramped office",
+      "connections":[
+        {
+          "direction":"south",
+          "door_name":"office door"
+        }
+      ],
+      "items":[
+        {
+          "name":"desk",
+          "description":"a desk with a drawer",
+          "location":"center of the room",
+          "contains":{
+            "name":"pistol",
+            "description":"a 9mm pistol",
+            "detail":"it appears to be in working condition",
+            "weapon_damage":0.9,
+            "ammo":1
+          }
+        },
+        {
+          "name":"cardboard box",
+          "description":"a cardboard storage box",
+          "location":"on the floor next to the desk",
+          "contains":{
+            "name":"pistol ammo",
+            "description":"a mostly empty box of 9mm ammo",
+            "ammo":2,
+            "weapon_name":"pistol"
+          }
+        }
+      ]
+    },
+    {
+      "name":"stairwell to roof",
+      "description":"a way out"
+    }
+  ],
+  "doors":[
+    {
+      "name":"storage room door",
+      "room_a":"waiting room",
+      "room_b":"storage room"
+    },
+    {
+      "name":"metal stairwell door",
+      "room_a":"waiting room",
+      "room_b":"stairwell to roof",
+      "locked":true,
+      "required_key_name":"iron key"
+    },
+    {
+      "name":"office door",
+      "room_a":"waiting room",
+      "room_b":"office"
+    }
+  ],
+  "enemies":[
+    {
+      "name":"zombie",
+      "description":"a wailing zombie",
+      "hp":1,
+      "room":"storage room",
+      "trigger":{
+        "event":"take_item",
+        "item_name":"iron key"
+      }
+    }
+  ]
+}
