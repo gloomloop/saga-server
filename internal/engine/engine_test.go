@@ -2552,7 +2552,7 @@ func TestWeaponAmmo_StartWithOneBullet(t *testing.T) {
 
 func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 	// Load the demo puzzle game
-	level, err := loader.LoadGame("../testdata/demo.json")
+	level, err := loader.LoadGameFromFile("../testdata/demo.json")
 	if err != nil {
 		t.Fatalf("Failed to load demo game: %v", err)
 	}

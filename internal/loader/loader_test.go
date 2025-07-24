@@ -1,6 +1,8 @@
 package loader
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	world "adventure-engine/internal/world"
@@ -8,7 +10,7 @@ import (
 
 func TestLoadGame_Demo(t *testing.T) {
 	// Load the demo puzzle game
-	level, err := LoadGame("../testdata/demo.json")
+	level, err := LoadGameFromFile("../testdata/demo.json")
 	if err != nil {
 		t.Fatalf("Failed to load game: %v", err)
 	}
@@ -325,6 +327,490 @@ func TestLoadGame_Demo(t *testing.T) {
 		if trigger.Effect.EnemyName != "zombie" {
 			t.Errorf("Expected trigger enemy name to be 'zombie', got '%s'", trigger.Effect.EnemyName)
 		}
+	}
+}
+
+func TestLoadGame_FromRawMessage(t *testing.T) {
+	// Test JSON data as raw message
+	jsonData := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room",
+				"items": [
+					{
+						"name": "test item",
+						"description": "a test item",
+						"portable": true
+					}
+				]
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	level, err := LoadGame(jsonData)
+	if err != nil {
+		t.Fatalf("Failed to load game from raw message: %v", err)
+	}
+
+	// Test basic properties
+	if level.Name != "test game" {
+		t.Errorf("Expected game name 'test game', got '%s'", level.Name)
+	}
+
+	if len(level.Rooms) != 1 {
+		t.Errorf("Expected 1 room, got %d", len(level.Rooms))
+	}
+
+	if len(level.Rooms[0].Items) != 1 {
+		t.Errorf("Expected 1 item in room, got %d", len(level.Rooms[0].Items))
+	}
+
+	if level.Rooms[0].Items[0].Name != "test item" {
+		t.Errorf("Expected item name 'test item', got '%s'", level.Rooms[0].Items[0].Name)
+	}
+}
+
+func TestLoadGame_ValidationErrors(t *testing.T) {
+	// Test invalid item configurations that should fail validation
+
+	// Test 1: Key that is also a container (should fail)
+	jsonData1 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room",
+				"items": [
+					{
+						"name": "invalid key",
+						"description": "a key that is also a container",
+						"key": true,
+						"contains": "empty"
+					}
+				]
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err := LoadGame(jsonData1)
+	if err == nil {
+		t.Error("Expected error for key that is also a container, got nil")
+	} else if !strings.Contains(err.Error(), "invalid key") {
+		t.Errorf("Expected error about invalid key, got: %v", err)
+	}
+
+	// Test 2: Weapon that is also a container (should fail)
+	jsonData2 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room",
+				"items": [
+					{
+						"name": "invalid weapon",
+						"description": "a weapon that is also a container",
+						"weapon_damage": 0.8,
+						"contains": "empty"
+					}
+				]
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData2)
+	if err == nil {
+		t.Error("Expected error for weapon that is also a container, got nil")
+	} else if !strings.Contains(err.Error(), "invalid weapon") {
+		t.Errorf("Expected error about invalid weapon, got: %v", err)
+	}
+
+	// Test 3: Container that is also a key (should fail)
+	jsonData3 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room",
+				"items": [
+					{
+						"name": "invalid container",
+						"description": "a container that is also a key",
+						"key": true,
+						"contains": "empty"
+					}
+				]
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData3)
+	if err == nil {
+		t.Error("Expected error for container that is also a key, got nil")
+	} else if !strings.Contains(err.Error(), "invalid container") {
+		t.Errorf("Expected error about invalid container, got: %v", err)
+	}
+
+	// Test 4: Nested containers (should fail)
+	jsonData4 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room",
+				"items": [
+					{
+						"name": "outer container",
+						"description": "a container with another container inside",
+						"contains": {
+							"name": "inner container",
+							"description": "a container inside another container",
+							"contains": "empty"
+						}
+					}
+				]
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData4)
+	if err == nil {
+		t.Error("Expected error for nested containers, got nil")
+	} else if !strings.Contains(err.Error(), "container cannot be nested") {
+		t.Errorf("Expected error about nested containers, got: %v", err)
+	}
+}
+
+func TestLoadGame_ReachabilityValidation(t *testing.T) {
+	// Test 1: Valid connected level (should pass)
+	jsonData1 := json.RawMessage(`{
+		"name": "connected level",
+		"rooms": [
+			{
+				"name": "room1",
+				"description": "first room",
+				"connections": [
+					{
+						"direction": "east",
+						"door_name": "door1"
+					}
+				]
+			},
+			{
+				"name": "room2",
+				"description": "second room",
+				"connections": [
+					{
+						"direction": "west",
+						"door_name": "door1"
+					}
+				]
+			}
+		],
+		"doors": [
+			{
+				"name": "door1",
+				"room_a": "room1",
+				"room_b": "room2"
+			}
+		],
+		"enemies": []
+	}`)
+
+	_, err := LoadGame(jsonData1)
+	if err != nil {
+		t.Errorf("Expected connected level to pass validation, got error: %v", err)
+	}
+
+	// Test 2: Disconnected level (should fail)
+	jsonData2 := json.RawMessage(`{
+		"name": "disconnected level",
+		"rooms": [
+			{
+				"name": "room1",
+				"description": "first room"
+			},
+			{
+				"name": "room2",
+				"description": "second room"
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData2)
+	if err == nil {
+		t.Error("Expected disconnected level to fail validation, got nil error")
+	} else if !strings.Contains(err.Error(), "unreachable rooms found") {
+		t.Errorf("Expected error about unreachable rooms, got: %v", err)
+	}
+
+	// Test 3: Level with isolated room (should fail)
+	jsonData3 := json.RawMessage(`{
+		"name": "level with isolated room",
+		"rooms": [
+			{
+				"name": "room1",
+				"description": "first room",
+				"connections": [
+					{
+						"direction": "east",
+						"door_name": "door1"
+					}
+				]
+			},
+			{
+				"name": "room2",
+				"description": "second room",
+				"connections": [
+					{
+						"direction": "west",
+						"door_name": "door1"
+					}
+				]
+			},
+			{
+				"name": "isolated_room",
+				"description": "room with no connections"
+			}
+		],
+		"doors": [
+			{
+				"name": "door1",
+				"room_a": "room1",
+				"room_b": "room2"
+			}
+		],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData3)
+	if err == nil {
+		t.Error("Expected level with isolated room to fail validation, got nil error")
+	} else if !strings.Contains(err.Error(), "unreachable rooms found") {
+		t.Errorf("Expected error about unreachable rooms, got: %v", err)
+	} else if !strings.Contains(err.Error(), "isolated_room") {
+		t.Errorf("Expected error to mention isolated_room, got: %v", err)
+	}
+
+	// Test 4: Complex connected level (should pass)
+	jsonData4 := json.RawMessage(`{
+		"name": "complex connected level",
+		"rooms": [
+			{
+				"name": "room1",
+				"description": "first room",
+				"connections": [
+					{
+						"direction": "east",
+						"door_name": "door1"
+					},
+					{
+						"direction": "south",
+						"door_name": "door3"
+					}
+				]
+			},
+			{
+				"name": "room2",
+				"description": "second room",
+				"connections": [
+					{
+						"direction": "west",
+						"door_name": "door1"
+					},
+					{
+						"direction": "south",
+						"door_name": "door2"
+					}
+				]
+			},
+			{
+				"name": "room3",
+				"description": "third room",
+				"connections": [
+					{
+						"direction": "north",
+						"door_name": "door2"
+					},
+					{
+						"direction": "west",
+						"door_name": "door3"
+					}
+				]
+			}
+		],
+		"doors": [
+			{
+				"name": "door1",
+				"room_a": "room1",
+				"room_b": "room2"
+			},
+			{
+				"name": "door2",
+				"room_a": "room2",
+				"room_b": "room3"
+			},
+			{
+				"name": "door3",
+				"room_a": "room1",
+				"room_b": "room3"
+			}
+		],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData4)
+	if err != nil {
+		t.Errorf("Expected complex connected level to pass validation, got error: %v", err)
+	}
+}
+
+func TestLoadGame_JSONStructureValidation(t *testing.T) {
+	// Test 1: Missing required field 'name' (should fail)
+	jsonData1 := json.RawMessage(`{
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room"
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err := LoadGame(jsonData1)
+	if err == nil {
+		t.Error("Expected error for missing 'name' field, got nil")
+	} else if !strings.Contains(err.Error(), "missing required field: name") {
+		t.Errorf("Expected error about missing name field, got: %v", err)
+	}
+
+	// Test 2: Missing required field 'rooms' (should fail)
+	jsonData2 := json.RawMessage(`{
+		"name": "test game",
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData2)
+	if err == nil {
+		t.Error("Expected error for missing 'rooms' field, got nil")
+	} else if !strings.Contains(err.Error(), "missing required field: rooms") {
+		t.Errorf("Expected error about missing rooms field, got: %v", err)
+	}
+
+	// Test 3: Empty name field (should fail)
+	jsonData3 := json.RawMessage(`{
+		"name": "",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room"
+			}
+		],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData3)
+	if err == nil {
+		t.Error("Expected error for empty name field, got nil")
+	} else if !strings.Contains(err.Error(), "field 'name' must be a non-empty string") {
+		t.Errorf("Expected error about empty name field, got: %v", err)
+	}
+
+	// Test 4: Empty rooms array (should fail)
+	jsonData4 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [],
+		"doors": [],
+		"enemies": []
+	}`)
+
+	_, err = LoadGame(jsonData4)
+	if err == nil {
+		t.Error("Expected error for empty rooms array, got nil")
+	} else if !strings.Contains(err.Error(), "field 'rooms' must be a non-empty array") {
+		t.Errorf("Expected error about empty rooms array, got: %v", err)
+	}
+
+	// Test 5: Unexpected field (should fail)
+	jsonData5 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room"
+			}
+		],
+		"doors": [],
+		"enemies": [],
+		"unexpected_field": "this should not be here"
+	}`)
+
+	_, err = LoadGame(jsonData5)
+	if err == nil {
+		t.Error("Expected error for unexpected field, got nil")
+	} else if !strings.Contains(err.Error(), "unexpected field: unexpected_field") {
+		t.Errorf("Expected error about unexpected field, got: %v", err)
+	}
+
+	// Test 6: Valid structure with all optional fields (should pass)
+	jsonData6 := json.RawMessage(`{
+		"name": "test game",
+		"win_condition": {
+			"event": "enter_room",
+			"room_name": "test room"
+		},
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room"
+			}
+		],
+		"doors": [],
+		"enemies": [],
+		"system_prompt_theme": "adventure"
+	}`)
+
+	_, err = LoadGame(jsonData6)
+	if err != nil {
+		t.Errorf("Expected valid structure to pass validation, got error: %v", err)
+	}
+
+	// Test 7: Invalid JSON format (should fail)
+	jsonData7 := json.RawMessage(`{
+		"name": "test game",
+		"rooms": [
+			{
+				"name": "test room",
+				"description": "a test room"
+			}
+		],
+		"doors": [],
+		"enemies": [],
+		"unclosed": {
+	}`)
+
+	_, err = LoadGame(jsonData7)
+	if err == nil {
+		t.Error("Expected error for invalid JSON format, got nil")
+	} else if !strings.Contains(err.Error(), "invalid JSON format") {
+		t.Errorf("Expected error about invalid JSON format, got: %v", err)
 	}
 }
 

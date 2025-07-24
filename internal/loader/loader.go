@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 
 	"adventure-engine/internal/world"
 )
@@ -107,11 +108,11 @@ type TriggerData struct {
 	ItemName string `json:"item_name"`
 }
 
-// LoadGame loads a game from a JSON file
-func LoadGame(filename string) (*world.Level, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+// LoadGame loads a game from JSON data
+func LoadGame(data json.RawMessage) (*world.Level, error) {
+	// Sanity check the JSON structure first
+	if err := validateJSONStructure(data); err != nil {
+		return nil, fmt.Errorf("JSON structure validation failed: %w", err)
 	}
 
 	var gameData GameData
@@ -173,7 +174,10 @@ func LoadGame(filename string) (*world.Level, error) {
 
 		// Add items
 		for _, itemData := range roomData.Items {
-			item := createItem(itemData)
+			item, err := createItem(itemData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create item %s: %w", itemData.Name, err)
+			}
 			room.Items = append(room.Items, item)
 		}
 	}
@@ -267,11 +271,143 @@ func LoadGame(filename string) (*world.Level, error) {
 		WinCondition: winCondition,
 	}
 
+	// Validate reachability
+	if err := validateReachability(level); err != nil {
+		return nil, fmt.Errorf("reachability validation failed: %w", err)
+	}
+
 	return level, nil
 }
 
+// LoadGameFromFile loads a game from a JSON file
+func LoadGameFromFile(filename string) (*world.Level, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+	return LoadGame(data)
+}
+
+// validateJSONStructure performs a sanity check on the JSON input structure
+func validateJSONStructure(data json.RawMessage) error {
+	// Parse the JSON into a generic map to check structure
+	var jsonMap map[string]interface{}
+	if err := json.Unmarshal(data, &jsonMap); err != nil {
+		return fmt.Errorf("invalid JSON format: %w", err)
+	}
+
+	// Check for required fields
+	requiredFields := []string{"name", "rooms"}
+	for _, field := range requiredFields {
+		if _, exists := jsonMap[field]; !exists {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	// Check for optional fields (these are allowed but not required)
+	optionalFields := []string{"win_condition", "doors", "enemies", "system_prompt_theme"}
+
+	// Check for any unexpected fields
+	allowedFields := make(map[string]bool)
+	for _, field := range requiredFields {
+		allowedFields[field] = true
+	}
+	for _, field := range optionalFields {
+		allowedFields[field] = true
+	}
+
+	for field := range jsonMap {
+		if !allowedFields[field] {
+			return fmt.Errorf("unexpected field: %s (allowed fields: %v)", field, getSortedKeys(allowedFields))
+		}
+	}
+
+	// Validate that required fields have the correct types
+	if name, ok := jsonMap["name"].(string); !ok || name == "" {
+		return fmt.Errorf("field 'name' must be a non-empty string")
+	}
+
+	if rooms, ok := jsonMap["rooms"].([]interface{}); !ok || len(rooms) == 0 {
+		return fmt.Errorf("field 'rooms' must be a non-empty array")
+	}
+
+	return nil
+}
+
+// getSortedKeys returns the keys of a map as a sorted slice
+func getSortedKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// validateReachability ensures that all rooms in the level are reachable from each other
+// by performing a breadth-first search starting from the first room
+func validateReachability(level *world.Level) error {
+	if len(level.Rooms) == 0 {
+		return fmt.Errorf("level has no rooms")
+	}
+
+	// Use BFS to find all reachable rooms
+	visited := make(map[string]bool)
+	queue := []string{level.Rooms[0].Name} // Start from the first room
+	visited[level.Rooms[0].Name] = true
+
+	for len(queue) > 0 {
+		currentRoomName := queue[0]
+		queue = queue[1:]
+
+		// Find the current room
+		var currentRoom *world.Room
+		for _, room := range level.Rooms {
+			if room.Name == currentRoomName {
+				currentRoom = room
+				break
+			}
+		}
+
+		if currentRoom == nil {
+			return fmt.Errorf("room %s not found in level", currentRoomName)
+		}
+
+		// Check all connections from this room
+		for _, door := range currentRoom.Connections {
+			// Determine the other room connected by this door
+			var otherRoomName string
+			if door.RoomA == currentRoomName {
+				otherRoomName = door.RoomB
+			} else {
+				otherRoomName = door.RoomA
+			}
+
+			// If we haven't visited this room yet, add it to the queue
+			if !visited[otherRoomName] {
+				visited[otherRoomName] = true
+				queue = append(queue, otherRoomName)
+			}
+		}
+	}
+
+	// Check if all rooms were visited
+	var unreachableRooms []string
+	for _, room := range level.Rooms {
+		if !visited[room.Name] {
+			unreachableRooms = append(unreachableRooms, room.Name)
+		}
+	}
+
+	if len(unreachableRooms) > 0 {
+		return fmt.Errorf("unreachable rooms found: %v", unreachableRooms)
+	}
+
+	return nil
+}
+
 // createItem recursively creates an item and its nested items
-func createItem(itemData ItemData) *world.Item {
+func createItem(itemData ItemData) (*world.Item, error) {
 	item := &world.Item{
 		BaseEntity: world.BaseEntity{
 			Name:        itemData.Name,
@@ -355,7 +491,11 @@ func createItem(itemData ItemData) *world.Item {
 			contains = nil
 		} else if itemData.Contains.Item != nil {
 			// Container with item
-			contains = createItem(*itemData.Contains.Item)
+			var err error
+			contains, err = createItem(*itemData.Contains.Item)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create contained item: %w", err)
+			}
 		}
 
 		var lock *world.Lock
@@ -375,12 +515,20 @@ func createItem(itemData ItemData) *world.Item {
 
 	// Handle concealers
 	if itemData.Conceals != nil {
-		hidden := createItem(*itemData.Conceals)
+		hidden, err := createItem(*itemData.Conceals)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create concealed item: %w", err)
+		}
 		item.Concealer = &world.Concealer{
 			Hidden:    hidden,
 			Uncovered: false,
 		}
 	}
 
-	return item
+	// Validate the item's initial state
+	if err := item.ValidateInitialState(); err != nil {
+		return nil, fmt.Errorf("invalid item %s: %w", item.Name, err)
+	}
+
+	return item, nil
 }
