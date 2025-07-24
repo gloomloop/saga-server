@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"adventure-engine/world"
+	"adventure-engine/internal/world"
 	"errors"
 	"fmt"
 	"math/rand/v2"

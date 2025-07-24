@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"adventure-engine/loader"
-	"adventure-engine/world"
+	"adventure-engine/internal/loader"
+	"adventure-engine/internal/world"
 	"os"
 	"strings"
 	"testing"
@@ -2552,7 +2552,7 @@ func TestWeaponAmmo_StartWithOneBullet(t *testing.T) {
 
 func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 	// Load the demo puzzle game
-	level, err := loader.LoadGame("../tests/demo.json")
+	level, err := loader.LoadGame("../testdata/demo.json")
 	if err != nil {
 		t.Fatalf("Failed to load demo game: %v", err)
 	}

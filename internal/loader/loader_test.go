@@ -3,12 +3,12 @@ package loader
 import (
 	"testing"
 
-	world "adventure-engine/world"
+	world "adventure-engine/internal/world"
 )
 
 func TestLoadGame_Demo(t *testing.T) {
 	// Load the demo puzzle game
-	level, err := LoadGame("../tests/demo.json")
+	level, err := LoadGame("../testdata/demo.json")
 	if err != nil {
 		t.Fatalf("Failed to load game: %v", err)
 	}

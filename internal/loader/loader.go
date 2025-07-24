@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"adventure-engine/world"
+	"adventure-engine/internal/world"
 )
 
 // GameData represents the top-level JSON structure
