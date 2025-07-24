@@ -16,7 +16,7 @@ import (
 )
 
 // GameSession represents a single game session
-// Add mu sync.RWMutex to protect Engine and mutable fields
+// Per-session mutexes synchronizes access to live game state
 type GameSession struct {
 	ID        string
 	LevelName string
@@ -26,7 +26,7 @@ type GameSession struct {
 }
 
 // SessionStore holds all active game sessions
-// Add mu sync.RWMutex to protect sessions map
+// Global mutex synchronizes access to sessions map
 type SessionStore struct {
 	sessions map[string]*GameSession
 	mu       sync.RWMutex
