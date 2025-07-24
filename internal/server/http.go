@@ -6,7 +6,7 @@ import (
 
 // SetupRoutes configures all the API routes for the multitenant server
 func SetupRoutes(r *gin.Engine) {
-	v1 := r.Group("/v1")
+	v1 := r.Group("api/v1")
 	{
 		v1.POST("/sessions", createSession)
 		v1.GET("/sessions", listSessions)

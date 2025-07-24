@@ -13,8 +13,12 @@ type CreateSessionResponse struct {
 }
 
 type Session struct {
-	ID                   string `json:"id"`
-	LevelName            string `json:"level_name"`
+	ID        string `json:"id"`
+	LevelName string `json:"level_name"`
+	CreatedAt string `json:"created_at"`
+}
+
+type EngineState struct {
 	LevelCompletionState string `json:"level_completion_state"`
 }
 
@@ -23,16 +27,12 @@ type ListSessionsResponse struct {
 }
 
 type GetSessionResponse struct {
-	Session Session `json:"session"`
+	Session     `json:"session"`
+	EngineState `json:"engine_state"`
 }
 
 type DeleteSessionResponse struct {
-	Session Session `json:"session"`
-}
-
-type DebugResponse struct {
-	Session Session         `json:"session"`
-	Debug   json.RawMessage `json:"debug"`
+	SessionID string `json:"session_id"`
 }
 
 // --- game actions ---
@@ -78,4 +78,9 @@ type ObserveResponse struct {
 	RoomDescription string          `json:"room_description"`
 	VisibleItems    []ItemInfo      `json:"visible_items"`
 	Doors           []DoorInfo      `json:"doors"`
+}
+
+type DebugResponse struct {
+	Session Session         `json:"session"`
+	Debug   json.RawMessage `json:"debug"`
 }

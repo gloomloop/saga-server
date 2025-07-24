@@ -506,6 +506,7 @@ type ItemInfo struct {
 	IsConcealer bool
 	IsKey       bool
 	IsAmmoBox   bool
+	IsWeapon    bool
 
 	// Container-specific fields
 	HasKeyLock  bool
@@ -546,6 +547,7 @@ func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 		IsConcealer: item.IsConcealer(),
 		IsKey:       item.IsKey(),
 		IsAmmoBox:   item.IsAmmoBox(),
+		IsWeapon:    item.IsWeapon(),
 	}
 
 	if item.IsContainer() {
