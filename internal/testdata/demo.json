@@ -1,5 +1,5 @@
 {
-  "name":"demo key puzzle",
+  "name":"demo puzzle",
   "system_prompt_theme":"silent hill / survival horror / puzzle",
   "win_condition":{
     "event":"enter_room",

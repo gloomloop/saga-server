@@ -16,8 +16,8 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test basic game properties
-	if level.Name != "demo key puzzle" {
-		t.Errorf("Expected game name 'demo key puzzle', got '%s'", level.Name)
+	if level.Name != "demo puzzle" {
+		t.Errorf("Expected game name 'demo puzzle', got '%s'", level.Name)
 	}
 
 	// Test rooms
