@@ -52,16 +52,16 @@ func TestInspectInternal(t *testing.T) {
 		t.Errorf("Inspect failed: %v", err)
 	}
 
-	if result.itemInspection == nil {
-		t.Fatal("Expected itemInspection, got nil")
+	if result.ItemInspection == nil {
+		t.Fatal("Expected ItemInspection, got nil")
 	}
 
-	if result.itemInspection.Name != "test_item" {
-		t.Errorf("Expected name 'test_item', got '%s'", result.itemInspection.Name)
+	if result.ItemInspection.Name != "test_item" {
+		t.Errorf("Expected name 'test_item', got '%s'", result.ItemInspection.Name)
 	}
 
-	if result.itemInspection.Description != "A test item" {
-		t.Errorf("Expected description 'A test item', got '%s'", result.itemInspection.Description)
+	if result.ItemInspection.Description != "A test item" {
+		t.Errorf("Expected description 'A test item', got '%s'", result.ItemInspection.Description)
 	}
 
 	// Test inspecting a door
@@ -70,8 +70,8 @@ func TestInspectInternal(t *testing.T) {
 		t.Errorf("Inspect failed: %v", err)
 	}
 
-	if result.doorInspection == nil {
-		t.Fatal("Expected doorInspection, got nil")
+	if result.DoorInspection == nil {
+		t.Fatal("Expected DoorInspection, got nil")
 	}
 
 	// --- Inspecting an item in a container ---
@@ -117,11 +117,11 @@ func TestInspectInternal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Inspect failed after searching container: %v", err)
 	}
-	if result.itemInspection == nil {
-		t.Fatal("Expected itemInspection for contained item after search, got nil")
+	if result.ItemInspection == nil {
+		t.Fatal("Expected ItemInspection for contained item after search, got nil")
 	}
-	if result.itemInspection.Name != "hidden_item" {
-		t.Errorf("Expected name 'hidden_item', got '%s'", result.itemInspection.Name)
+	if result.ItemInspection.Name != "hidden_item" {
+		t.Errorf("Expected name 'hidden_item', got '%s'", result.ItemInspection.Name)
 	}
 }
 
@@ -315,8 +315,8 @@ func TestUncoverInternal(t *testing.T) {
 		t.Errorf("Uncover failed: %v", err)
 	}
 
-	if result.name != "rug" {
-		t.Errorf("Expected name 'rug', got '%s'", result.name)
+	if result.Name != "rug" {
+		t.Errorf("Expected name 'rug', got '%s'", result.Name)
 	}
 	if result.RevealedItem.Name != "hidden_gem" {
 		t.Errorf("Expected revealed item 'hidden_gem', got '%s'", result.RevealedItem.Name)
@@ -1233,7 +1233,6 @@ func TestBattleInternal(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		Room:         "room",
 		HP:           3,
 		TriggerEvent: world.TriggerEventTakeItem,
 	}
@@ -1421,7 +1420,6 @@ func TestBattle_WeaponDamageLogic(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		Room:         "room",
 		HP:           10,
 		TriggerEvent: world.TriggerEventTakeItem,
 	}
@@ -1593,7 +1591,6 @@ func TestEventHandling_EnterCombatOnTakeGem(t *testing.T) {
 			Name:        "goblin",
 			Description: "A sneaky goblin",
 		},
-		Room:         "room",
 		HP:           1,
 		TriggerEvent: world.TriggerEventTakeItem,
 	}
@@ -1692,7 +1689,6 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 			Name:        "skeleton",
 			Description: "A rattling skeleton",
 		},
-		Room:         "room",
 		HP:           1,
 		TriggerEvent: world.TriggerEventTakeItem,
 	}
@@ -1985,7 +1981,6 @@ func TestValidation_ActionNotAllowedInMode(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		Room:         "room",
 		HP:           1,
 		TriggerEvent: world.TriggerEventTakeItem,
 	}
@@ -2070,16 +2065,14 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		Room: "Room2",
-		HP:   1,
+		HP: 1,
 	}
 	enemy2 := &world.Enemy{
 		BaseEntity: world.BaseEntity{
 			Name:        "skeleton",
 			Description: "A rattling skeleton",
 		},
-		Room: "Room3",
-		HP:   1,
+		HP: 1,
 	}
 
 	// Create triggers for entering rooms
@@ -2616,16 +2609,16 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Fatalf("Inspect note failed: %v", err)
 	}
 
-	if inspectResult.Result.itemInspection == nil {
+	if inspectResult.Result.ItemInspection == nil {
 		t.Fatal("Expected item inspection result, got nil")
 	}
 
-	if !strings.Contains(inspectResult.Result.itemInspection.Detail, "got to get away from that thing") {
-		t.Errorf("Expected to inspect ominous note, got %s", inspectResult.Result.itemInspection.Detail)
+	if !strings.Contains(inspectResult.Result.ItemInspection.Detail, "got to get away from that thing") {
+		t.Errorf("Expected to inspect ominous note, got %s", inspectResult.Result.ItemInspection.Detail)
 	}
 
 	if debugFlag {
-		t.Logf("Note detail: %s", inspectResult.Result.itemInspection.Detail)
+		t.Logf("Note detail: %s", inspectResult.Result.ItemInspection.Detail)
 	}
 
 	// 4. Go north to the office

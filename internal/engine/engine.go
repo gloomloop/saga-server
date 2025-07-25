@@ -155,6 +155,7 @@ type EngineStateInfo struct {
 	LevelCompletionState          LevelCompletionState
 	Mode                          Mode
 	EngineStateChangeNotification *EngineStateChangeNotification
+	FightingEnemy                 string
 }
 
 // --- public wrapper results ---
@@ -498,15 +499,16 @@ func (e *Engine) Battle(weaponName string) (*BattleResult, error) {
 
 // ItemInfo contains the basic information about an item, excluding detail.
 type ItemInfo struct {
-	Name        string
-	Description string
-	Location    string
-	IsPortable  bool
-	IsContainer bool
-	IsConcealer bool
-	IsKey       bool
-	IsAmmoBox   bool
-	IsWeapon    bool
+	Name         string
+	Description  string
+	Location     string
+	IsPortable   bool
+	IsContainer  bool
+	IsConcealer  bool
+	IsKey        bool
+	IsAmmoBox    bool
+	IsWeapon     bool
+	IsHealthItem bool
 
 	// Container-specific fields
 	HasKeyLock  bool
@@ -525,29 +527,30 @@ type DoorInfo struct {
 	IsLocked    bool
 }
 
-// itemInspection contains the details of an inspected item.
-type itemInspection struct {
+// ItemInspection contains the details of an inspected item.
+type ItemInspection struct {
 	ItemInfo
 	Detail string
 }
 
-// doorInspection contains the details of an inspected door.
-type doorInspection struct {
+// DoorInspection contains the details of an inspected door.
+type DoorInspection struct {
 	DoorInfo
 }
 
 // createItemInfo creates an ItemInfo from a world item.
 func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 	result := ItemInfo{
-		Name:        item.Name,
-		Description: item.Description,
-		Location:    item.Location,
-		IsPortable:  item.IsPortable(),
-		IsContainer: item.IsContainer(),
-		IsConcealer: item.IsConcealer(),
-		IsKey:       item.IsKey(),
-		IsAmmoBox:   item.IsAmmoBox(),
-		IsWeapon:    item.IsWeapon(),
+		Name:         item.Name,
+		Description:  item.Description,
+		Location:     item.Location,
+		IsPortable:   item.IsPortable(),
+		IsContainer:  item.IsContainer(),
+		IsConcealer:  item.IsConcealer(),
+		IsKey:        item.IsKey(),
+		IsAmmoBox:    item.IsAmmoBox(),
+		IsWeapon:     item.IsWeapon(),
+		IsHealthItem: item.IsHealthItem(),
 	}
 
 	if item.IsContainer() {
@@ -569,7 +572,6 @@ func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 func (e *Engine) createDoorInfo(door *world.Door) DoorInfo {
 	result := DoorInfo{
 		Name:        door.Name,
-		Description: door.Description,
 		HasKeyLock:  door.HasKeyLock(),
 		HasCodeLock: door.HasCodeLock(),
 		IsLocked:    door.IsLocked(),
@@ -688,13 +690,13 @@ type observeResultInternal struct {
 
 // inspectResultInternal contains the details of an inspected item or door.
 type inspectResultInternal struct {
-	*itemInspection
-	*doorInspection
+	*ItemInspection
+	*DoorInspection
 }
 
 // uncoverResultInternal is the result of uncovering a concealed item.
 type uncoverResultInternal struct {
-	name         string
+	Name         string
 	RevealedItem ItemInfo
 }
 
@@ -752,8 +754,10 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 		result.VisibleItems = append(result.VisibleItems, e.createItemInfo(item))
 	}
 
-	for _, door := range e.CurrentRoom.Connections {
-		result.Doors = append(result.Doors, e.createDoorInfo(door))
+	for direction, door := range e.CurrentRoom.Connections {
+		doorInfo := e.createDoorInfo(door)
+		doorInfo.Direction = direction
+		result.Doors = append(result.Doors, doorInfo)
 	}
 	return result, nil
 }
@@ -764,7 +768,7 @@ func (e *Engine) inspectInternal(name string) (*inspectResultInternal, error) {
 	door, err := e.findDoor(name)
 	if err == nil {
 		return &inspectResultInternal{
-			doorInspection: &doorInspection{
+			DoorInspection: &DoorInspection{
 				DoorInfo: e.createDoorInfo(door),
 			},
 		}, nil
@@ -772,7 +776,7 @@ func (e *Engine) inspectInternal(name string) (*inspectResultInternal, error) {
 	item, err := e.findItem(name)
 	if err == nil {
 		return &inspectResultInternal{
-			itemInspection: &itemInspection{
+			ItemInspection: &ItemInspection{
 				ItemInfo: e.createItemInfo(item),
 				Detail:   item.Detail,
 			},
@@ -803,7 +807,7 @@ func (e *Engine) uncoverInternal(name string) (*uncoverResultInternal, error) {
 	e.CurrentRoom.Items = append(e.CurrentRoom.Items, revealedItem)
 
 	return &uncoverResultInternal{
-		name:         name,
+		Name:         name,
 		RevealedItem: e.createItemInfo(revealedItem),
 	}, nil
 }
@@ -1118,7 +1122,6 @@ type DebugItemInfo struct {
 // DebugDoorInfo contains complete debug information about a door.
 type DebugDoorInfo struct {
 	Name        string
-	Description string
 	Direction   string
 	RoomA       string
 	RoomB       string
@@ -1368,7 +1371,6 @@ func (e *Engine) createDebugItemInfoPtr(item *world.Item) *DebugItemInfo {
 func (e *Engine) createDebugDoorInfo(door *world.Door, direction string) DebugDoorInfo {
 	result := DebugDoorInfo{
 		Name:        door.Name,
-		Description: door.Description,
 		Direction:   direction,
 		RoomA:       door.RoomA,
 		RoomB:       door.RoomB,
@@ -1388,7 +1390,6 @@ func (e *Engine) createDebugEnemyInfo(enemy *world.Enemy) DebugEnemyInfo {
 	return DebugEnemyInfo{
 		Name:        enemy.Name,
 		Description: enemy.Description,
-		Room:        enemy.Room,
 		HP:          enemy.HP,
 		IsAlive:     enemy.IsAlive(),
 	}

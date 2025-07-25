@@ -302,10 +302,6 @@ func TestLoadGame_Demo(t *testing.T) {
 		t.Errorf("Expected zombie HP to be 1, got %d", zombie.HP)
 	}
 
-	if zombie.Room != "storage room" {
-		t.Errorf("Expected zombie to be in storage room, got '%s'", zombie.Room)
-	}
-
 	if zombie.TriggerEvent != world.TriggerEventTakeItem {
 		t.Errorf("Expected zombie trigger event to be TriggerEventTakeItem, got %s", zombie.TriggerEvent)
 	}

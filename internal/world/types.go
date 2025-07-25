@@ -48,8 +48,7 @@ const (
 // Enemy is an NPC that must be defeated to return to investigation mode.
 type Enemy struct {
 	BaseEntity
-	Room string
-	HP   int
+	HP int
 	TriggerEvent
 	// RoomName string
 }

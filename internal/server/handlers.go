@@ -50,6 +50,7 @@ func safeGetSessionFromStore(sid string, c *gin.Context) *GameSession {
 
 // --- session management ---
 
+// createSession creates a new game session, loading the level from the request body
 func createSession(c *gin.Context) {
 	var req v1.CreateSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,14 +111,17 @@ func getSession(c *gin.Context) {
 			LevelName: s.LevelName,
 			CreatedAt: s.CreatedAt.Format(time.RFC3339),
 		},
-		EngineState: v1.EngineState{
+		EngineStateInfo: v1.EngineStateInfo{
 			LevelCompletionState: string(s.Engine.LevelCompletionState),
+			Mode:                 string(s.Engine.Mode),
 		},
 	}
 	s.mu.RUnlock()
 	c.JSON(http.StatusOK, resp)
 }
 
+// deleteSession deletes a game session
+// Note: this just deletes the reference -- it should be GC'd eventually
 func deleteSession(c *gin.Context) {
 	sid := c.Param("sid")
 	sessionStore.mu.Lock()
@@ -132,6 +136,7 @@ func deleteSession(c *gin.Context) {
 	c.JSON(http.StatusOK, v1.DeleteSessionResponse{SessionID: sid})
 }
 
+// getDebug returns detailed debug information for a game session
 func getDebug(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -168,6 +173,7 @@ func getDebug(c *gin.Context) {
 // Engine returned error: 422 unprocessable entity
 // Engine did not return error: 200 ok
 
+// observe handles observe action requests
 func observe(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -184,61 +190,10 @@ func observe(c *gin.Context) {
 		return
 	}
 
-	// Map engine.EngineStateInfo to v1.EngineStateInfo
-	var notification string
-	if result.EngineStateInfo.EngineStateChangeNotification != nil {
-		notification = string(*result.EngineStateInfo.EngineStateChangeNotification)
-	}
-	engineState := v1.EngineStateInfo{
-		LevelCompletionState: string(result.EngineStateInfo.LevelCompletionState),
-		Mode:                 string(result.EngineStateInfo.Mode),
-		Notification:         notification,
-	}
-
-	// Map items and doors
-	items := make([]v1.ItemInfo, len(result.Result.VisibleItems))
-	for i, item := range result.Result.VisibleItems {
-		items[i] = v1.ItemInfo{
-			Name:        item.Name,
-			Description: item.Description,
-			Location:    item.Location,
-			IsPortable:  item.IsPortable,
-			IsKey:       item.IsKey,
-			IsWeapon:    item.IsWeapon,
-			IsContainer: item.IsContainer,
-			IsConcealer: item.IsConcealer,
-			IsAmmoBox:   item.IsAmmoBox,
-			HasKeyLock:  item.HasKeyLock,
-			HasCodeLock: item.HasCodeLock,
-			IsLocked:    item.IsLocked,
-			Contains:    item.Contains,
-		}
-	}
-
-	doors := make([]v1.DoorInfo, len(result.Result.Doors))
-	for i, door := range result.Result.Doors {
-		// RoomName is not present in engine.DoorInfo, so leave blank
-		doors[i] = v1.DoorInfo{
-			Name:        door.Name,
-			Description: door.Description,
-			Direction:   door.Direction,
-			IsLocked:    door.IsLocked,
-			HasKeyLock:  door.HasKeyLock,
-			HasCodeLock: door.HasCodeLock,
-			RoomName:    "",
-		}
-	}
-
-	resp := v1.ObserveResponse{
-		EngineStateInfo: engineState,
-		RoomName:        result.Result.RoomName,
-		RoomDescription: result.Result.RoomDescription,
-		VisibleItems:    items,
-		Doors:           doors,
-	}
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, v1.EngineResultToResponseObserve(result))
 }
 
+// inspect handles inspect action requests
 func inspect(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -246,12 +201,25 @@ func inspect(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.InspectRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid InspectRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement inspect action
-	c.JSON(http.StatusOK, gin.H{"message": "inspect - TODO", "sid": sid})
+
+	result, err := s.Engine.Inspect(requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseInspect(result))
 }
 
+// uncover handles uncover action requests
 func uncover(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -259,12 +227,25 @@ func uncover(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.InspectRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UncoverRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement uncover action
-	c.JSON(http.StatusOK, gin.H{"message": "uncover - TODO", "sid": sid})
+
+	result, err := s.Engine.Uncover(requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseUncover(result))
 }
 
+// unlock handles unlock action requests
 func unlock(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -272,12 +253,25 @@ func unlock(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.UnlockRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UnlockRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement unlock action
-	c.JSON(http.StatusOK, gin.H{"message": "unlock - TODO", "sid": sid})
+
+	result, err := s.Engine.Unlock(requestBody.KeyOrCode, requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseUnlock(result))
 }
 
+// search handles search action requests
 func search(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -285,12 +279,25 @@ func search(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.SearchRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid SearchRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement search action
-	c.JSON(http.StatusOK, gin.H{"message": "search - TODO", "sid": sid})
+
+	result, err := s.Engine.Search(requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseSearch(result))
 }
 
+// take handles take action requests
 func take(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -298,12 +305,25 @@ func take(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.TakeRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid TakeRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement take action
-	c.JSON(http.StatusOK, gin.H{"message": "take - TODO", "sid": sid})
+
+	result, err := s.Engine.Take(requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseTake(result))
 }
 
+// inventory handles inventory action requests
 func inventory(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -311,12 +331,25 @@ func inventory(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.InventoryRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid InventoryRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement inventory retrieval
-	c.JSON(http.StatusOK, gin.H{"message": "inventory - TODO", "sid": sid})
+
+	result, err := s.Engine.Inventory()
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseInventory(result))
 }
 
+// heal handles heal action requests
 func heal(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -324,12 +357,25 @@ func heal(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.HealRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HealRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement heal action
-	c.JSON(http.StatusOK, gin.H{"message": "heal - TODO", "sid": sid})
+
+	result, err := s.Engine.Heal(requestBody.HealthItemName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseHeal(result))
 }
 
+// traverse handles traverse action requests
 func traverse(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -338,12 +384,32 @@ func traverse(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.TraverseRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid TraverseRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement traverse action
-	c.JSON(http.StatusOK, gin.H{"message": "traverse - TODO", "sid": sid})
+
+	_, err := s.Engine.Traverse(requestBody.Destination)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Observe the room after entering and use this as the response
+	observeResult, err := s.Engine.Observe()
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseTraverse(observeResult))
 }
 
+// battle handles battle action requests
 func battle(c *gin.Context) {
 	sid := c.Param("sid")
 	s := safeGetSessionFromStore(sid, c)
@@ -352,8 +418,20 @@ func battle(c *gin.Context) {
 		return
 	}
 
+	var requestBody v1.BattleRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid BattleRequest", "details": err.Error()})
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// TODO: Implement battle action
-	c.JSON(http.StatusOK, gin.H{"message": "battle - TODO", "sid": sid})
+
+	result, err := s.Engine.Battle(requestBody.WeaponName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseBattle(result))
 }

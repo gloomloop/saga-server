@@ -200,7 +200,6 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 				Name:        enemyData.Name,
 				Description: enemyData.Description,
 			},
-			Room:         enemyData.Room,
 			HP:           enemyData.HP,
 			TriggerEvent: triggerEvent,
 		}
