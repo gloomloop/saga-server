@@ -177,7 +177,6 @@ class GameREPL(cmd.Cmd):
         
         try:
             response = self.client.inspect(arg.strip())
-            print(dir(response))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
@@ -311,21 +310,6 @@ class GameREPL(cmd.Cmd):
         print("Type 'help' for available commands.")
 
 
-def load_demo_game() -> Dict[str, Any]:
-    """Load the demo game data."""
-    demo_path = Path(__file__).parent / "server" / "internal" / "testdata" / "demo.json"
-    
-    if not demo_path.exists():
-        # Try relative path from current directory
-        demo_path = Path("server/internal/testdata/demo.json")
-    
-    if not demo_path.exists():
-        raise FileNotFoundError(f"Could not find demo.json at {demo_path}")
-    
-    with open(demo_path, 'r') as f:
-        return json.load(f)
-
-
 def main():
     """Main function to run the game REPL."""
     print("Starting Adventure Game REPL Client...")
@@ -343,7 +327,8 @@ def main():
     client = GameClient()
     
     try:
-        demo_game = load_demo_game()
+        with open("internal/testdata/demo.json", 'r') as f:
+            demo_game = json.load(f)
         session_id = client.create_session(demo_game)
         print(f"Created session: {session_id}")
         print(f"Loaded demo game: {demo_game['name']}")

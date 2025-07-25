@@ -220,6 +220,7 @@ func EngineResultToResponseInspect(result *engine.InspectResult) *InspectRespons
 	}
 	if result.Result.ItemInspection != nil {
 		response.ItemInfo = getResponseItemInfo(&result.Result.ItemInspection.ItemInfo)
+		response.ItemInfo.Details = result.Result.ItemInspection.Detail
 	}
 	if result.Result.DoorInspection != nil {
 		response.DoorInfo = getResponseDoorInfo(&result.Result.DoorInspection.DoorInfo)
