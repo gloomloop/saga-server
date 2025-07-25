@@ -18,7 +18,7 @@ Saga (Structured Adventure Game Agent) Engine Server is a text-based adventure g
     go run cmd/server/main.go
     ```
 
-3. Play the demo game
+3. Play the [demo game](internal/testdata/demo.json)
     ```
     (saga) peter@Mac server % python repl.py
     Starting Adventure Game REPL Client...
