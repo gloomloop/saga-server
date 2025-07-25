@@ -116,7 +116,8 @@ type InventoryRequest struct{}
 
 type InventoryResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	Inventory       []ItemInfo `json:"inventory"`
+	Inventory       []ItemInfo  `json:"inventory"`
+	Ammo            []AmmoCount `json:"ammo"`
 }
 
 type HealRequest struct {
@@ -181,6 +182,11 @@ type RoomInfo struct {
 	RoomDescription string     `json:"description"`
 	VisibleItems    []ItemInfo `json:"visible_items"`
 	Doors           []DoorInfo `json:"connections"`
+}
+
+type AmmoCount struct {
+	WeaponName string `json:"weapon_name"`
+	AmmoCount  int    `json:"ammo_count"`
 }
 
 // --- helpers to translate engine results to API responses ---
@@ -262,11 +268,22 @@ func EngineResultToResponseTake(result *engine.TakeResult) *TakeResponse {
 func EngineResultToResponseInventory(result *engine.InventoryResult) *InventoryResponse {
 	inventory := make([]ItemInfo, len(result.Result.Items))
 	for i, item := range result.Result.Items {
-		inventory[i] = *getResponseItemInfo(&item)
+		inventory[i] = ItemInfo{
+			Name:        item.Name,
+			Description: item.Description,
+		}
+	}
+	ammo := make([]AmmoCount, len(result.Result.Ammo))
+	for i, ammoCount := range result.Result.Ammo {
+		ammo[i] = AmmoCount{
+			WeaponName: ammoCount.WeaponName,
+			AmmoCount:  ammoCount.AmmoCount,
+		}
 	}
 	return &InventoryResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
 		Inventory:       inventory,
+		Ammo:            ammo,
 	}
 }
 

@@ -266,7 +266,6 @@ func (e *Engine) ensureInvestigationMode() error {
 // - Unlock
 // - Search
 // - Take
-// - Inventory
 // - Traverse
 //
 // The following actions are allowed in combat mode:
@@ -413,7 +412,7 @@ func (e *Engine) Take(name string) (*TakeResult, error) {
 // Inventory returns the player's inventory.
 // Returns an InventoryResult and engine state info.
 func (e *Engine) Inventory() (*InventoryResult, error) {
-	if err := e.validateEngineStateForInvestigationActions(); err != nil {
+	if err := e.validateEngineState(); err != nil {
 		return nil, err
 	}
 	inventoryResult, err := e.inventoryInternal()
@@ -536,6 +535,12 @@ type ItemInspection struct {
 // DoorInspection contains the details of an inspected door.
 type DoorInspection struct {
 	DoorInfo
+}
+
+// AmmoCount contains ammo count for a weapon, displayed with inventory.
+type AmmoCount struct {
+	WeaponName string
+	AmmoCount  int
 }
 
 // createItemInfo creates an ItemInfo from a world item.
@@ -719,6 +724,7 @@ type takeResultInternal struct {
 // inventoryResultInternal is the result of getting the player's inventory.
 type inventoryResultInternal struct {
 	Items []ItemInfo
+	Ammo  []AmmoCount
 }
 
 // healResultInternal is the result of healing the player.
@@ -963,6 +969,12 @@ func (e *Engine) inventoryInternal() (*inventoryResultInternal, error) {
 	result := &inventoryResultInternal{}
 	for _, item := range e.Player.Inventory {
 		result.Items = append(result.Items, e.createItemInfo(item))
+	}
+	for weaponName, ammoCount := range e.Player.Ammo {
+		result.Ammo = append(result.Ammo, AmmoCount{
+			WeaponName: weaponName,
+			AmmoCount:  ammoCount,
+		})
 	}
 	return result, nil
 }
