@@ -91,7 +91,7 @@ class GameClient:
     
     def traverse(self, destination: str) -> Dict[str, Any]:
         """Move to another room."""
-        return self._make_request("POST", "traverse", {"destination_name": destination})
+        return self._make_request("POST", "traverse", {"door_or_direction": destination})
     
     def battle(self, weapon_name: str) -> Dict[str, Any]:
         """Battle an enemy."""

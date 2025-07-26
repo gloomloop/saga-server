@@ -130,7 +130,7 @@ type HealResponse struct {
 }
 
 type TraverseRequest struct {
-	Destination string `json:"destination_name" binding:"required"`
+	Destination string `json:"door_or_direction" binding:"required"`
 }
 
 type TraverseResponse struct {
