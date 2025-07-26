@@ -104,7 +104,7 @@ type SearchResponse struct {
 }
 
 type TakeRequest struct {
-	TargetName string `json:"name" binding:"required"`
+	TargetName string `json:"target_name" binding:"required"`
 }
 
 type TakeResponse struct {
