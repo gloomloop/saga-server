@@ -1,6 +1,6 @@
-# Saga Engine Server
+# SAGA Engine Server
 
-Saga (Structured Adventure Game Agent) Engine Server is a multitenant text-based adventure game server written in Go and optimized for use with tool-calling LLM agents. It is part of the open core of the Saga Engine project, along with the Saga Engine Agent.
+SAGA (Structured Adventure Game Agent) Engine Server is a multitenant text-based adventure game server written in Go and optimized for use with tool-calling LLM agents. It is part of the SAGA Engine project, along with the [SAGA Engine Agent](https://github.com/gloomloop/saga-agent).
 
 This repo comes with a REPL client for testing purposes.
 
