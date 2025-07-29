@@ -1,6 +1,6 @@
 {
   "name":"demo puzzle",
-  "system_prompt_theme":"silent hill / survival horror / puzzle",
+  "system_prompt_theme":"survival horror",
   "win_condition":{
     "event":"enter_room",
     "room_name":"stairwell to roof"
