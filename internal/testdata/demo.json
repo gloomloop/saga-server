@@ -11,15 +11,15 @@
       "description":"a dilapidated waiting room",
       "connections":[
         {
-          "direction":"east",
+          "location":"left",
           "door_name":"storage room door"
         },
         {
-          "direction":"west",
+          "location":"right",
           "door_name":"metal stairwell door"
         },
         {
-          "direction":"north",
+          "location":"ahead",
           "door_name":"office door"
         }
       ],
@@ -48,7 +48,7 @@
       "description":"a dusty storage room",
       "connections":[
         {
-          "direction":"west",
+          "location":"back",
           "door_name":"storage room door"
         }
       ],
@@ -96,7 +96,7 @@
       "description":"a cramped office",
       "connections":[
         {
-          "direction":"south",
+          "location":"back",
           "door_name":"office door"
         }
       ],

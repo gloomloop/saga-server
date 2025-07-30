@@ -23,7 +23,7 @@ func TestRoomWithNonPortableItem(t *testing.T) {
 			Name:        "test_room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*Door{}, // no doors
+		Connections: []*Connection{}, // no doors
 		Items:       []*Item{item},
 	}
 
@@ -63,7 +63,7 @@ func TestPortableItemTransfer(t *testing.T) {
 			Name:        "test_room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*Door{},
+		Connections: []*Connection{},
 		Items:       []*Item{item},
 	}
 
@@ -300,7 +300,7 @@ func TestConcealedPortableItem(t *testing.T) {
 			Name:        "test_room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*Door{},
+		Connections: []*Connection{},
 		Items:       []*Item{sheet}, // Start with just the sheet
 	}
 
@@ -518,7 +518,7 @@ func TestConcealedCabinet(t *testing.T) {
 			Name:        "test_room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*Door{},
+		Connections: []*Connection{},
 		Items:       []*Item{sheet}, // Start with just the sheet
 	}
 

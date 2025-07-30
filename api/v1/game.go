@@ -170,7 +170,7 @@ type ItemInfo struct {
 
 type DoorInfo struct {
 	Name        string `json:"name"`
-	Direction   string `json:"direction"`
+	Location    string `json:"location"`
 	IsLocked    bool   `json:"is_locked,omitempty"`
 	HasKeyLock  bool   `json:"has_key_lock,omitempty"`
 	HasCodeLock bool   `json:"has_code_lock,omitempty"`
@@ -354,7 +354,7 @@ func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
 func getResponseDoorInfo(door *engine.DoorInfo) *DoorInfo {
 	return &DoorInfo{
 		Name:        door.Name,
-		Direction:   door.Direction,
+		Location:    door.Location,
 		IsLocked:    door.IsLocked,
 		HasKeyLock:  door.HasKeyLock,
 		HasCodeLock: door.HasCodeLock,

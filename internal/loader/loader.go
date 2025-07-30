@@ -39,8 +39,8 @@ type RoomData struct {
 
 // ConnectionData represents a room connection in the JSON
 type ConnectionData struct {
-	Direction string `json:"direction"`
-	DoorName  string `json:"door_name"`
+	Location string `json:"location"`
+	DoorName string `json:"door_name"`
 }
 
 // ContainerContents can be either an ItemData or the string "empty"
@@ -133,7 +133,7 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 				Name:        roomData.Name,
 				Description: roomData.Description,
 			},
-			Connections: make(map[string]*world.Door),
+			Connections: []*world.Connection{},
 			Items:       []*world.Item{},
 		}
 		roomsMap[roomData.Name] = room
@@ -170,8 +170,12 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 
 		// Add connections
 		for _, conn := range roomData.Connections {
-			if door, exists := doorsMap[conn.DoorName]; exists {
-				room.Connections[conn.Direction] = door
+			if _, exists := doorsMap[conn.DoorName]; exists {
+				connection := &world.Connection{
+					DoorName: conn.DoorName,
+					Location: conn.Location,
+				}
+				room.Connections = append(room.Connections, connection)
 			}
 		}
 
@@ -395,7 +399,19 @@ func validateReachability(level *world.Level) error {
 		}
 
 		// Check all connections from this room
-		for _, door := range currentRoom.Connections {
+		for _, conn := range currentRoom.Connections {
+			// Find the actual door in the level
+			var door *world.Door
+			for _, d := range level.Doors {
+				if d.Name == conn.DoorName {
+					door = d
+					break
+				}
+			}
+			if door == nil {
+				continue
+			}
+
 			// Determine the other room connected by this door
 			var otherRoomName string
 			if door.RoomA == currentRoomName {

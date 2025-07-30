@@ -21,12 +21,10 @@ func TestInspectInternal(t *testing.T) {
 			Name:        "test_room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{
-			"north": {
-				BaseEntity: world.BaseEntity{
-					Name:        "test_door",
-					Description: "A test door",
-				},
+		Connections: []*world.Connection{
+			{
+				DoorName: "test_door",
+				Location: "north",
 			},
 		},
 		Items: []*world.Item{
@@ -41,8 +39,18 @@ func TestInspectInternal(t *testing.T) {
 		},
 	}
 
+	testDoor := &world.Door{
+		BaseEntity: world.BaseEntity{
+			Name:        "test_door",
+			Description: "A test door",
+		},
+		RoomA: "test_room",
+		RoomB: "other_room",
+	}
+
 	engine := NewEngine(&world.Level{
 		Rooms:        []*world.Room{room},
+		Doors:        []*world.Door{testDoor},
 		WinCondition: nil,
 	})
 
@@ -188,7 +196,7 @@ func TestObserve_Visibility(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{regularItem, sheet, box},
 	}
 
@@ -300,7 +308,7 @@ func TestUncoverInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{rug},
 	}
 
@@ -378,7 +386,7 @@ func TestSearchInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{box},
 	}
 
@@ -454,7 +462,7 @@ func TestSearch_LockedContainer(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{safe},
 	}
 
@@ -536,7 +544,7 @@ func TestTakeInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{coin, rock, box},
 	}
 
@@ -589,7 +597,7 @@ func TestTraverseInternal(t *testing.T) {
 			Name:        "RoomA",
 			Description: "The first room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 	roomB := &world.Room{
@@ -597,7 +605,7 @@ func TestTraverseInternal(t *testing.T) {
 			Name:        "RoomB",
 			Description: "The second room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -611,26 +619,14 @@ func TestTraverseInternal(t *testing.T) {
 		RoomB: "RoomB",
 		Lock:  nil, // unlocked
 	}
-	roomA.Connections["east"] = door
-	roomB.Connections["west"] = door
-
-	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{roomA, roomB},
-		WinCondition: nil,
+	roomA.Connections = append(roomA.Connections, &world.Connection{
+		DoorName: "doorAB",
+		Location: "east",
 	})
-	engine.CurrentRoom = roomA
-
-	// --- Move from RoomA to RoomB through unlocked door (should succeed) ---
-	result, err := engine.traverseInternal("east")
-	if err != nil {
-		t.Errorf("Traverse failed: %v", err)
-	}
-	if result == nil || result.ToRoom != "RoomB" {
-		t.Error("Expected to traverse to RoomB")
-	}
-	if engine.CurrentRoom.Name != "RoomB" {
-		t.Error("Player should be in RoomB after traverse")
-	}
+	roomB.Connections = append(roomB.Connections, &world.Connection{
+		DoorName: "doorAB",
+		Location: "west",
+	})
 
 	// --- Attempt to move through a locked door (should fail) ---
 	lockedDoor := &world.Door{
@@ -645,15 +641,33 @@ func TestTraverseInternal(t *testing.T) {
 			KeyName: "key",
 		},
 	}
-	roomB.Connections["north"] = lockedDoor
 
-	_, err = engine.traverseInternal("north")
+	engine := NewEngine(&world.Level{
+		Rooms:        []*world.Room{roomA, roomB},
+		Doors:        []*world.Door{door, lockedDoor},
+		WinCondition: nil,
+	})
+	engine.CurrentRoom = roomA
+
+	// --- Move from RoomA to RoomB through unlocked door (should succeed) ---
+	result, err := engine.traverseInternal("doorAB")
+	if err != nil {
+		t.Errorf("Traverse failed: %v", err)
+	}
+	if result == nil || result.ToRoom != "RoomB" {
+		t.Error("Expected to traverse to RoomB")
+	}
+	if engine.CurrentRoom.Name != "RoomB" {
+		t.Error("Player should be in RoomB after traverse")
+	}
+
+	_, err = engine.traverseInternal("lockedDoor")
 	if err == nil {
 		t.Error("Expected error when traversing through a locked door, got nil")
 	}
 
 	// --- Attempt to move through a non-existent door (should fail) ---
-	_, err = engine.traverseInternal("south")
+	_, err = engine.traverseInternal("nonexistent_door")
 	if err == nil {
 		t.Error("Expected error when traversing through a non-existent door, got nil")
 	}
@@ -668,6 +682,37 @@ func TestTraverseInternal(t *testing.T) {
 	}
 	if engine.CurrentRoom.Name != "RoomA" {
 		t.Error("Player should be in RoomA after traverse by door name")
+	}
+
+	// --- Test location-based navigation ---
+	// Move from RoomA to RoomB using location (should succeed)
+	result, err = engine.traverseInternal("east")
+	if err != nil {
+		t.Errorf("Traverse by location failed: %v", err)
+	}
+	if result == nil || result.ToRoom != "RoomB" {
+		t.Error("Expected to traverse to RoomB using location")
+	}
+	if engine.CurrentRoom.Name != "RoomB" {
+		t.Error("Player should be in RoomB after traverse by location")
+	}
+
+	// Move back from RoomB to RoomA using location (should succeed)
+	result, err = engine.traverseInternal("west")
+	if err != nil {
+		t.Errorf("Traverse by location failed: %v", err)
+	}
+	if result == nil || result.ToRoom != "RoomA" {
+		t.Error("Expected to traverse to RoomA using location")
+	}
+	if engine.CurrentRoom.Name != "RoomA" {
+		t.Error("Player should be in RoomA after traverse by location")
+	}
+
+	// Test invalid location (should fail)
+	_, err = engine.traverseInternal("north")
+	if err == nil {
+		t.Error("Expected error when traversing to invalid location, got nil")
 	}
 }
 
@@ -702,7 +747,7 @@ func TestTake_UncoverConcealer(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{rug},
 	}
 
@@ -779,7 +824,7 @@ func TestTake_AmmoBox(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{shotgun, ammoBox},
 	}
 
@@ -896,15 +941,22 @@ func TestUnlockInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{
-			"north": lockedDoor,
-			"east":  codeDoor,
+		Connections: []*world.Connection{
+			{
+				DoorName: "locked_door",
+				Location: "north",
+			},
+			{
+				DoorName: "code_door",
+				Location: "east",
+			},
 		},
 		Items: []*world.Item{lockedBox, lockedSafe},
 	}
 
 	engine := NewEngine(&world.Level{
 		Rooms:        []*world.Room{room},
+		Doors:        []*world.Door{lockedDoor, codeDoor},
 		WinCondition: nil,
 	})
 
@@ -1055,7 +1107,7 @@ func TestHealInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1158,7 +1210,7 @@ func TestHeal_RemovesHealthItemFromInventory(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1242,7 +1294,7 @@ func TestBattleInternal(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1429,7 +1481,7 @@ func TestBattle_WeaponDamageLogic(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1478,7 +1530,7 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 			Name:        "Room1",
 			Description: "The first room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 	room2 := &world.Room{
@@ -1486,7 +1538,7 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 			Name:        "Room2",
 			Description: "The second room (not win)",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 	room3 := &world.Room{
@@ -1494,7 +1546,7 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 			Name:        "Room3",
 			Description: "The third room (win room)",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1517,10 +1569,22 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 		RoomB: "Room3",
 		Lock:  nil, // unlocked
 	}
-	room1.Connections["east"] = door1
-	room2.Connections["west"] = door1
-	room2.Connections["east"] = door2
-	room3.Connections["west"] = door2
+	room1.Connections = append(room1.Connections, &world.Connection{
+		DoorName: "door1",
+		Location: "east",
+	})
+	room2.Connections = append(room2.Connections, &world.Connection{
+		DoorName: "door1",
+		Location: "west",
+	})
+	room2.Connections = append(room2.Connections, &world.Connection{
+		DoorName: "door2",
+		Location: "east",
+	})
+	room3.Connections = append(room3.Connections, &world.Connection{
+		DoorName: "door2",
+		Location: "west",
+	})
 
 	// Set win condition: entering Room3
 	winCondition := &world.Event{
@@ -1530,12 +1594,13 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 
 	engine := NewEngine(&world.Level{
 		Rooms:        []*world.Room{room1, room2, room3},
+		Doors:        []*world.Door{door1, door2},
 		WinCondition: winCondition,
 	})
 	engine.CurrentRoom = room1
 
 	// Traverse to Room2 (should NOT trigger win condition)
-	result, err := engine.Traverse("east")
+	result, err := engine.Traverse("door1")
 	if err != nil {
 		t.Fatalf("Traverse to Room2 failed: %v", err)
 	}
@@ -1547,7 +1612,7 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 	}
 
 	// Traverse to Room3 (should trigger win condition)
-	result, err = engine.Traverse("east")
+	result, err = engine.Traverse("door2")
 	if err != nil {
 		t.Fatalf("Traverse to Room3 failed: %v", err)
 	}
@@ -1612,7 +1677,7 @@ func TestEventHandling_EnterCombatOnTakeGem(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{rock, gem},
 	}
 
@@ -1711,7 +1776,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 			Name:        "treasure_room",
 			Description: "A room filled with treasure!",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1721,7 +1786,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 			Name:        "room",
 			Description: "A dusty chamber.",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{chest},
 	}
 
@@ -1738,8 +1803,14 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 			KeyName: "key",
 		},
 	}
-	startRoom.Connections["north"] = door
-	winRoom.Connections["south"] = door
+	startRoom.Connections = append(startRoom.Connections, &world.Connection{
+		DoorName: "treasure_door",
+		Location: "north",
+	})
+	winRoom.Connections = append(winRoom.Connections, &world.Connection{
+		DoorName: "treasure_door",
+		Location: "south",
+	})
 
 	// Set win condition: entering the treasure room
 	winCondition := &world.Event{
@@ -1749,6 +1820,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 
 	engine := NewEngine(&world.Level{
 		Rooms:        []*world.Room{startRoom, winRoom},
+		Doors:        []*world.Door{door},
 		Enemies:      []*world.Enemy{enemy},
 		Triggers:     []*world.Trigger{trigger},
 		WinCondition: winCondition,
@@ -1814,7 +1886,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 	}
 
 	// 5. Traverse to the treasure room (should trigger win notification)
-	traverseResult, err := engine.Traverse("north")
+	traverseResult, err := engine.Traverse("treasure_door")
 	if err != nil {
 		t.Fatalf("Traverse to treasure room failed: %v", err)
 	}
@@ -1865,7 +1937,7 @@ func TestFireWeapon_WithAndWithoutAmmo(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{pistol, ammoBox},
 	}
 
@@ -1925,7 +1997,7 @@ func TestTake_RemovesItemFromRoom(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{item},
 	}
 
@@ -1956,7 +2028,7 @@ func TestValidation_ActionNotAllowedInMode(t *testing.T) {
 			Name:        "room",
 			Description: "A test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -1987,7 +2059,7 @@ func TestValidation_ActionNotAllowedInMode(t *testing.T) {
 	engine.FightingEnemy = enemy
 	engine.Mode = Combat
 
-	_, err = engine.Traverse("north")
+	_, err = engine.Traverse("door1")
 	if err == nil {
 		t.Error("Expected error when trying to traverse in combat mode, got nil")
 	} else if err.Error() != "cannot perform this action in combat mode" {
@@ -2015,7 +2087,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 			Name:        "Room1",
 			Description: "The first room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 	room2 := &world.Room{
@@ -2023,7 +2095,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 			Name:        "Room2",
 			Description: "The second room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 	room3 := &world.Room{
@@ -2031,7 +2103,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 			Name:        "Room3",
 			Description: "The third room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{},
 	}
 
@@ -2054,10 +2126,22 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 		RoomB: "Room3",
 		Lock:  nil,
 	}
-	room1.Connections["east"] = door1
-	room2.Connections["west"] = door1
-	room2.Connections["east"] = door2
-	room3.Connections["west"] = door2
+	room1.Connections = append(room1.Connections, &world.Connection{
+		DoorName: "door1",
+		Location: "east",
+	})
+	room2.Connections = append(room2.Connections, &world.Connection{
+		DoorName: "door1",
+		Location: "west",
+	})
+	room2.Connections = append(room2.Connections, &world.Connection{
+		DoorName: "door2",
+		Location: "east",
+	})
+	room3.Connections = append(room3.Connections, &world.Connection{
+		DoorName: "door2",
+		Location: "west",
+	})
 
 	// Create two enemies
 	enemy1 := &world.Enemy{
@@ -2099,6 +2183,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 
 	engine := NewEngine(&world.Level{
 		Rooms:        []*world.Room{room1, room2, room3},
+		Doors:        []*world.Door{door1, door2},
 		Enemies:      []*world.Enemy{enemy1, enemy2},
 		Triggers:     []*world.Trigger{trigger1, trigger2},
 		WinCondition: nil,
@@ -2116,7 +2201,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 	engine.Rng = fakeRng
 
 	// Test 1: Enter Room2 (should trigger combat with goblin)
-	result, err := engine.Traverse("east")
+	result, err := engine.Traverse("door1")
 	if err != nil {
 		t.Fatalf("Traverse to Room2 failed: %v", err)
 	}
@@ -2153,7 +2238,7 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 	}
 
 	// Test 3: Enter Room3 (should trigger combat with skeleton)
-	result, err = engine.Traverse("east")
+	result, err = engine.Traverse("door2")
 	if err != nil {
 		t.Fatalf("Traverse to Room3 failed: %v", err)
 	}
@@ -2223,7 +2308,7 @@ func TestDebug_SimpleRoomSetup(t *testing.T) {
 			Name:        "room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{chest},
 	}
 
@@ -2427,7 +2512,7 @@ func TestDebug_SearchChestAndTakeGem(t *testing.T) {
 			Name:        "room",
 			Description: "A simple test room",
 		},
-		Connections: map[string]*world.Door{},
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{chest},
 	}
 
@@ -2496,7 +2581,7 @@ func TestWeaponAmmo_StartWithOneBullet(t *testing.T) {
 			Name:        "test_room",
 			Description: "A test room",
 		},
-		Connections: make(map[string]*world.Door),
+		Connections: []*world.Connection{},
 		Items:       []*world.Item{weapon},
 	}
 
@@ -2622,7 +2707,7 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 	}
 
 	// 4. Go north to the office
-	traverseResult, err := engine.Traverse("north")
+	traverseResult, err := engine.Traverse("office door")
 	if err != nil {
 		t.Fatalf("Traverse to office failed: %v", err)
 	}
@@ -2769,7 +2854,7 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 	}
 
 	// 7. Go back to the first room
-	traverseResult, err = engine.Traverse("south")
+	traverseResult, err = engine.Traverse("office door")
 	if err != nil {
 		t.Fatalf("Traverse back to waiting room failed: %v", err)
 	}
@@ -2778,8 +2863,8 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Errorf("Expected to traverse back to waiting room, got %s", traverseResult.Result.ToRoom)
 	}
 
-	// 8. Go east to storage room
-	traverseResult, err = engine.Traverse("east")
+	// 8. Go left to storage room
+	traverseResult, err = engine.Traverse("left")
 	if err != nil {
 		t.Fatalf("Traverse to storage room failed: %v", err)
 	}
@@ -3009,7 +3094,7 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 
 	// 15. Use the key to complete the level
 	// First, go back to waiting room
-	_, err = engine.Traverse("west")
+	_, err = engine.Traverse("storage room door")
 	if err != nil {
 		t.Fatalf("Traverse back to waiting room failed: %v", err)
 	}
@@ -3029,7 +3114,7 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 	}
 
 	// Traverse to the stairwell (this should trigger win condition!)
-	traverseResult, err = engine.Traverse("west")
+	traverseResult, err = engine.Traverse("metal stairwell door")
 	if err != nil {
 		t.Fatalf("Traverse to stairwell failed: %v", err)
 	}

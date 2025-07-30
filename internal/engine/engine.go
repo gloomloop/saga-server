@@ -520,7 +520,7 @@ type ItemInfo struct {
 type DoorInfo struct {
 	Name        string
 	Description string
-	Direction   string
+	Location    string
 	HasKeyLock  bool
 	HasCodeLock bool
 	IsLocked    bool
@@ -629,23 +629,16 @@ func (e *Engine) findItem(name string) (*world.Item, error) {
 	return nil, fmt.Errorf("you don't see a %s here", name)
 }
 
-// findDoor finds a door by name.
-func (e *Engine) findDoor(name string) (*world.Door, error) {
-	for _, door := range e.CurrentRoom.Connections {
-		if door.Name == name {
-			return door, nil
-		}
+// findDoorByName finds a door by name.
+func (e *Engine) findDoorByName(name string) (*world.Door, error) {
+	// First find the connection in the current room
+	conn, err := e.CurrentRoom.GetConnection(name)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("you don't see a %s here", name)
-}
 
-// findDoorByDirection finds a door by direction.
-func (e *Engine) findDoorByDirection(direction string) (*world.Door, error) {
-	door, ok := e.CurrentRoom.Connections[direction]
-	if !ok {
-		return nil, fmt.Errorf("there is no door to the %s", direction)
-	}
-	return door, nil
+	// Then find the actual door in the level
+	return e.Level.GetDoor(conn.DoorName), nil
 }
 
 func (e *Engine) useHealthItem(healthItem *world.Item) world.HealthState {
@@ -672,15 +665,15 @@ func (e *Engine) validateKey(keyName string) error {
 	return nil
 }
 
-// findDoorByNameOrDirection finds a door by name or direction.
-func (e *Engine) findDoorByNameOrDirection(nameOrDirection string) (*world.Door, error) {
-	if nameOrDirection == "east" ||
-		nameOrDirection == "west" ||
-		nameOrDirection == "north" ||
-		nameOrDirection == "south" {
-		return e.findDoorByDirection(nameOrDirection)
+// findDoorByLocation finds a door by location (e.g., "left", "ahead", "back", "right").
+func (e *Engine) findDoorByLocation(location string) (*world.Door, error) {
+	for _, conn := range e.CurrentRoom.Connections {
+		if conn.Location == location {
+			// Find the actual door in the level
+			return e.Level.GetDoor(conn.DoorName), nil
+		}
 	}
-	return e.findDoor(nameOrDirection)
+	return nil, fmt.Errorf("no door to the %s", location)
 }
 
 // --- internal results ---
@@ -760,9 +753,11 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 		result.VisibleItems = append(result.VisibleItems, e.createItemInfo(item))
 	}
 
-	for direction, door := range e.CurrentRoom.Connections {
+	for _, conn := range e.CurrentRoom.Connections {
+		// Find the actual door in the level
+		door := e.Level.GetDoor(conn.DoorName)
 		doorInfo := e.createDoorInfo(door)
-		doorInfo.Direction = direction
+		doorInfo.Location = conn.Location
 		result.Doors = append(result.Doors, doorInfo)
 	}
 	return result, nil
@@ -771,7 +766,7 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 // Inspect inspects an item or door by name.
 // Note: this is mainly intended for use on items, but we handle doors just in case.
 func (e *Engine) inspectInternal(name string) (*inspectResultInternal, error) {
-	door, err := e.findDoor(name)
+	door, err := e.findDoorByName(name)
 	if err == nil {
 		return &inspectResultInternal{
 			DoorInspection: &DoorInspection{
@@ -844,7 +839,7 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 	}
 
 	// Try to unlock a door.
-	if door, err := e.findDoor(targetName); err == nil {
+	if door, err := e.findDoorByName(targetName); err == nil {
 		if door.HasCodeLock() {
 			err := door.UnlockWithCode(keyNameOrCode)
 			if err != nil {
@@ -1003,13 +998,20 @@ func (e *Engine) healInternal(healthItemName string) (*healResultInternal, error
 }
 
 // Traverse moves the player to a destination room if reachable and unlocked.
+// Destination can be either a door name or a location (e.g., "left", "ahead", "back", "right").
 func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, error) {
 	var destinationRoom *world.Room
+	var door *world.Door
+	var err error
 
-	// Find the door to the destination room.
-	door, err := e.findDoorByNameOrDirection(destination)
+	// Try to find the door by name first
+	door, err = e.findDoorByName(destination)
 	if err != nil {
-		return nil, err
+		// If not found by name, try to find by location
+		door, err = e.findDoorByLocation(destination)
+		if err != nil {
+			return nil, fmt.Errorf("no door named '%s' or no door to the '%s'", destination, destination)
+		}
 	}
 
 	// Check if the door is locked.
@@ -1134,7 +1136,7 @@ type DebugItemInfo struct {
 // DebugDoorInfo contains complete debug information about a door.
 type DebugDoorInfo struct {
 	Name        string
-	Direction   string
+	Location    string
 	RoomA       string
 	RoomB       string
 	HasKeyLock  bool
@@ -1258,7 +1260,7 @@ func (d *DebugResult) PrettyPrint() string {
 		}
 		result += fmt.Sprintf("  Doors: %d\n", len(room.Doors))
 		for i, door := range room.Doors {
-			result += fmt.Sprintf("    %d. %s (%s) -> %s\n", i+1, door.Name, door.Direction, door.RoomB)
+			result += fmt.Sprintf("    %d. %s (%s) -> %s\n", i+1, door.Name, door.Location, door.RoomB)
 			result += fmt.Sprintf("      Locked: %t, KeyLock: %t, CodeLock: %t\n", door.IsLocked, door.HasKeyLock, door.HasCodeLock)
 		}
 		result += "\n"
@@ -1380,10 +1382,10 @@ func (e *Engine) createDebugItemInfoPtr(item *world.Item) *DebugItemInfo {
 }
 
 // createDebugDoorInfo creates a DebugDoorInfo from a world door.
-func (e *Engine) createDebugDoorInfo(door *world.Door, direction string) DebugDoorInfo {
+func (e *Engine) createDebugDoorInfo(door *world.Door, location string) DebugDoorInfo {
 	result := DebugDoorInfo{
 		Name:        door.Name,
-		Direction:   direction,
+		Location:    location,
 		RoomA:       door.RoomA,
 		RoomB:       door.RoomB,
 		HasKeyLock:  door.HasKeyLock(),
@@ -1421,8 +1423,10 @@ func (e *Engine) createDebugRoomInfo(room *world.Room, isCurrent bool) DebugRoom
 	}
 
 	// Add doors
-	for direction, door := range room.Connections {
-		result.Doors = append(result.Doors, e.createDebugDoorInfo(door, direction))
+	for _, conn := range room.Connections {
+		// Find the actual door in the level
+		door := e.Level.GetDoor(conn.DoorName)
+		result.Doors = append(result.Doors, e.createDebugDoorInfo(door, conn.Location))
 	}
 
 	return result

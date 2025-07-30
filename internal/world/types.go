@@ -31,10 +31,17 @@ type Door struct {
 	Lock  *Lock
 }
 
+// Connection represents a door as seen from a specific room.
+// The location is relative to the room from which it is observed.
+type Connection struct {
+	DoorName string
+	Location string
+}
+
 // Room is a location the player can occupy.
 type Room struct {
 	BaseEntity
-	Connections map[string]*Door
+	Connections []*Connection
 	Items       []*Item
 }
 
@@ -66,13 +73,14 @@ func (e *Enemy) IsAlive() bool {
 
 // --- room methods ---
 
-// GetDoor returns a door from the room.
-func (r *Room) GetDoor(direction string) (*Door, error) {
-	door, ok := r.Connections[direction]
-	if !ok {
-		return nil, fmt.Errorf("no door to the %s", direction)
+// GetConnection returns a connection from the room by door name.
+func (r *Room) GetConnection(doorName string) (*Connection, error) {
+	for _, conn := range r.Connections {
+		if conn.DoorName == doorName {
+			return conn, nil
+		}
 	}
-	return door, nil
+	return nil, fmt.Errorf("no door named %s in this room", doorName)
 }
 
 // GetItem returns an item from the room.
@@ -304,4 +312,14 @@ func (e *Level) GetRoom(name string) *Room {
 		}
 	}
 	panic(fmt.Sprintf("no room named %s", name))
+}
+
+// GetDoor returns a door by name.
+func (e *Level) GetDoor(name string) *Door {
+	for _, door := range e.Doors {
+		if door.Name == name {
+			return door
+		}
+	}
+	panic(fmt.Sprintf("no door named %s", name))
 }
