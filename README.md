@@ -20,7 +20,7 @@ This repo comes with a REPL client for testing purposes.
     go run cmd/server/main.go
     ```
 
-3. Play the [demo game](internal/testdata/demo.json)
+3. Play the [demo game](internal/testdata/demo.yaml)
     ```
     (saga) peter@Mac server % python repl.py
     Starting Adventure Game REPL Client...
