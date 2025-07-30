@@ -49,7 +49,7 @@ This repo comes with a REPL client for testing purposes.
     ║    observe                                                   ║
     ║    inspect "tattered grey hoodie"                            ║
     ║    take "energy drink"                                       ║
-    ║    go east                                                   ║
+    ║    go left                                                   ║
     ║    unlock "2468" "safe"                                      ║
     ╚══════════════════════════════════════════════════════════════╝
     ```
@@ -101,7 +101,7 @@ This repo comes with a REPL client for testing purposes.
     ```
 - Enter the storage room
     ```
-    game> go east
+    game> go left
     {
         "engine_state": {
             "level_completion": "in_progress",
