@@ -100,7 +100,7 @@ type SearchRequest struct {
 type SearchResponse struct {
 	EngineStateInfo `json:"engine_state"`
 	ContainedItem   *ItemInfo `json:"contained_item,omitempty"`
-	IsEmpty         bool      `json:"is_empty"`
+	IsEmpty         bool      `json:"is_empty,omitempty"`
 }
 
 type TakeRequest struct {
@@ -296,23 +296,22 @@ func EngineResultToResponseHeal(result *engine.HealResult) *HealResponse {
 	}
 }
 
-// engineResultToResponseTraverse translates an engine.ObserveResult to an TraverseResponse
-// This one is a bit weird because we convert an ObserveResult to a TraverseResponse
-func EngineResultToResponseTraverse(result *engine.ObserveResult) *TraverseResponse {
-	items := make([]ItemInfo, len(result.Result.VisibleItems))
-	for i, item := range result.Result.VisibleItems {
+// engineResultToResponseTraverse translates an engine.TraverseResult to a TraverseResponse
+func EngineResultToResponseTraverse(result *engine.TraverseResult) *TraverseResponse {
+	items := make([]ItemInfo, len(result.Result.EnteredRoom.VisibleItems))
+	for i, item := range result.Result.EnteredRoom.VisibleItems {
 		items[i] = *getResponseItemInfo(&item)
 	}
-	doors := make([]DoorInfo, len(result.Result.Doors))
-	for i, door := range result.Result.Doors {
+	doors := make([]DoorInfo, len(result.Result.EnteredRoom.Doors))
+	for i, door := range result.Result.EnteredRoom.Doors {
 		doors[i] = *getResponseDoorInfo(&door)
 	}
 
 	return &TraverseResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
 		EnteredRoom: RoomInfo{
-			RoomName:        result.Result.RoomName,
-			RoomDescription: result.Result.RoomDescription,
+			RoomName:        result.Result.EnteredRoom.RoomName,
+			RoomDescription: result.Result.EnteredRoom.RoomDescription,
 			VisibleItems:    items,
 			Doors:           doors,
 		},
@@ -333,7 +332,7 @@ func EngineResultToResponseBattle(result *engine.BattleResult) *BattleResponse {
 // --- private helpers ---
 
 func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
-	return &ItemInfo{
+	itemInfo := &ItemInfo{
 		Name:         item.Name,
 		Description:  item.Description,
 		Location:     item.Location,
@@ -349,16 +348,40 @@ func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
 		IsLocked:     item.IsLocked,
 		Contains:     item.Contains,
 	}
+
+	// Suppress irrelevant information in final response
+	if !item.IsLocked {
+		itemInfo.HasKeyLock = false
+		itemInfo.HasCodeLock = false
+	}
+	if item.IsSearched {
+		itemInfo.IsContainer = false
+		if item.Contains == "" {
+			itemInfo.Contains = "empty"
+		}
+	}
+	if item.IsConcealer && item.IsUncovered {
+		itemInfo.IsConcealer = false
+	}
+
+	return itemInfo
 }
 
 func getResponseDoorInfo(door *engine.DoorInfo) *DoorInfo {
-	return &DoorInfo{
+	doorInfo := &DoorInfo{
 		Name:        door.Name,
 		Location:    door.Location,
 		IsLocked:    door.IsLocked,
 		HasKeyLock:  door.HasKeyLock,
 		HasCodeLock: door.HasCodeLock,
 	}
+
+	// Suppress irrelevant information in final response
+	if !door.IsLocked {
+		doorInfo.HasKeyLock = false
+		doorInfo.HasCodeLock = false
+	}
+	return doorInfo
 }
 
 func getResponseEngineStateInfo(engineState *engine.EngineStateInfo) *EngineStateInfo {

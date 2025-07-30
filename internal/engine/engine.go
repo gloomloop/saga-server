@@ -454,7 +454,7 @@ func (e *Engine) Traverse(destination string) (*TraverseResult, error) {
 	}
 	stateChange := e.handleEvent(&world.Event{
 		Event:    world.EventRoomEntered,
-		RoomName: traverseResult.ToRoom,
+		RoomName: traverseResult.EnteredRoom.RoomName,
 	})
 	engineStateInfo := e.getEngineStateInfo()
 	engineStateInfo.EngineStateChangeNotification = stateChange
@@ -515,6 +515,9 @@ type ItemInfo struct {
 	IsLocked    bool
 	IsSearched  bool
 	Contains    string
+
+	// Concealer-specific fields
+	IsUncovered bool
 }
 
 type DoorInfo struct {
@@ -556,6 +559,7 @@ func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 		IsAmmoBox:    item.IsAmmoBox(),
 		IsWeapon:     item.IsWeapon(),
 		IsHealthItem: item.IsHealthItem(),
+		IsUncovered:  item.IsConcealer() && item.Concealer.Uncovered,
 	}
 
 	if item.IsContainer() {
@@ -727,9 +731,7 @@ type healResultInternal struct {
 
 // traverseResultInternal is the result of traversing between rooms.
 type traverseResultInternal struct {
-	FromRoom string
-	ToRoom   string
-	DoorName string
+	EnteredRoom observeResultInternal
 }
 
 // battleResultInternal is the result of battling an enemy.
@@ -758,6 +760,7 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 		door := e.Level.GetDoor(conn.DoorName)
 		doorInfo := e.createDoorInfo(door)
 		doorInfo.Location = conn.Location
+		fmt.Printf("conn: %+v, doorInfo.Location: %s\n", conn, doorInfo.Location)
 		result.Doors = append(result.Doors, doorInfo)
 	}
 	return result, nil
@@ -1025,13 +1028,18 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 		destinationRoom = e.Level.GetRoom(door.RoomA)
 	}
 
-	result := &traverseResultInternal{
-		FromRoom: e.CurrentRoom.Name,
-		ToRoom:   destinationRoom.Name,
-		DoorName: door.Name,
+	// Move to the destination room
+	e.CurrentRoom = destinationRoom
+
+	// Get the observation result for the entered room (without event handling)
+	enteredRoomObs, err := e.observeInternal()
+	if err != nil {
+		return nil, err
 	}
 
-	e.CurrentRoom = destinationRoom
+	result := &traverseResultInternal{
+		EnteredRoom: *enteredRoomObs,
+	}
 
 	return result, nil
 }

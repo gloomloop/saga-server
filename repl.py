@@ -10,7 +10,8 @@ import json
 import requests
 import cmd
 import sys
-from typing import Optional, Dict, Any
+import shlex
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
 # Server configuration
@@ -147,6 +148,7 @@ class GameREPL(cmd.Cmd):
 ║    take "energy drink"                                       ║
 ║    go east                                                   ║
 ║    unlock "2468" "safe"                                      ║
+║    unlock "iron key" "metal stairwell door"                  ║
 ╚══════════════════════════════════════════════════════════════╝
 """
     prompt = "game> "
@@ -156,6 +158,16 @@ class GameREPL(cmd.Cmd):
         self.client = client
         self.print_response(self.client.observe())
     
+    def parse_args(self, arg: str) -> List[str]:
+        """Parse command arguments, handling quoted strings properly."""
+        if not arg.strip():
+            return []
+        try:
+            return shlex.split(arg.strip())
+        except ValueError:
+            # Fallback to simple split if shlex fails
+            return arg.strip().split()
+
     def print_response(self, response: Dict[str, Any]):
         """Pretty print a JSON response."""
         print(json.dumps(response, indent=2))
@@ -171,33 +183,36 @@ class GameREPL(cmd.Cmd):
     
     def do_inspect(self, arg):
         """Inspect an item or door."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: inspect <item_name>")
             return
         
         try:
-            response = self.client.inspect(arg.strip())
+            response = self.client.inspect(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
     
     def do_uncover(self, arg):
         """Uncover a concealed item."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: uncover <item_name>")
             return
         
         try:
-            response = self.client.uncover(arg.strip())
+            response = self.client.uncover(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
     
     def do_unlock(self, arg):
         """Unlock a door or container."""
-        args = arg.strip().split()
+        args = self.parse_args(arg)
         if len(args) != 2:
             print("Usage: unlock <key_or_code> <target_name>")
+            print("Example: unlock \"iron key\" \"metal stairwell door\"")
             return
         
         key_or_code, target_name = args
@@ -209,24 +224,26 @@ class GameREPL(cmd.Cmd):
     
     def do_search(self, arg):
         """Search a container."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: search <container_name>")
             return
         
         try:
-            response = self.client.search(arg.strip())
+            response = self.client.search(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
     
     def do_take(self, arg):
         """Take an item."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: take <item_name>")
             return
         
         try:
-            response = self.client.take(arg.strip())
+            response = self.client.take(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
@@ -241,36 +258,39 @@ class GameREPL(cmd.Cmd):
     
     def do_heal(self, arg):
         """Use a health item."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: heal <health_item_name>")
             return
         
         try:
-            response = self.client.heal(arg.strip())
+            response = self.client.heal(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
     
     def do_go(self, arg):
         """Move to another room."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: go <direction_or_room_name>")
             return
         
         try:
-            response = self.client.traverse(arg.strip())
+            response = self.client.traverse(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
     
     def do_battle(self, arg):
         """Battle an enemy."""
-        if not arg.strip():
+        args = self.parse_args(arg)
+        if not args:
             print("Usage: battle <weapon_name>")
             return
         
         try:
-            response = self.client.battle(arg.strip())
+            response = self.client.battle(" ".join(args))
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))

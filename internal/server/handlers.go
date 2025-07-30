@@ -393,20 +393,19 @@ func traverse(c *gin.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	_, err := s.Engine.Traverse(requestBody.Destination)
+	traverseResult, err := s.Engine.Traverse(requestBody.Destination)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Observe the room after entering and use this as the response
-	observeResult, err := s.Engine.Observe()
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, v1.EngineResultToResponseTraverse(observeResult))
+	c.JSON(http.StatusOK, v1.EngineResultToResponseTraverse(traverseResult))
 }
 
 // battle handles battle action requests

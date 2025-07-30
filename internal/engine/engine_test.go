@@ -606,7 +606,15 @@ func TestTraverseInternal(t *testing.T) {
 			Description: "The second room",
 		},
 		Connections: []*world.Connection{},
-		Items:       []*world.Item{},
+		Items: []*world.Item{
+			{
+				BaseEntity: world.BaseEntity{
+					Name:        "test_item",
+					Description: "A test item in RoomB",
+				},
+				Location: "on the floor",
+			},
+		},
 	}
 
 	// Create an unlocked door between RoomA and RoomB
@@ -654,11 +662,27 @@ func TestTraverseInternal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Traverse failed: %v", err)
 	}
-	if result == nil || result.ToRoom != "RoomB" {
-		t.Error("Expected to traverse to RoomB")
+	if result == nil || result.EnteredRoom.RoomName != "RoomB" {
+		t.Error("Expected traverse result, got nil")
 	}
 	if engine.CurrentRoom.Name != "RoomB" {
 		t.Error("Player should be in RoomB after traverse")
+	}
+
+	// Verify the EnteredRoom field contains the correct observation data
+	if result.EnteredRoom.RoomName != "RoomB" {
+		t.Errorf("Expected EnteredRoom.RoomName to be 'RoomB', got '%s'", result.EnteredRoom.RoomName)
+	}
+	if result.EnteredRoom.RoomDescription != "The second room" {
+		t.Errorf("Expected EnteredRoom.RoomDescription to be 'The second room', got '%s'", result.EnteredRoom.RoomDescription)
+	}
+
+	// Verify that items in the room are included in EnteredRoom data
+	if len(result.EnteredRoom.VisibleItems) != 1 {
+		t.Errorf("Expected 1 visible item in EnteredRoom, got %d", len(result.EnteredRoom.VisibleItems))
+	}
+	if result.EnteredRoom.VisibleItems[0].Name != "test_item" {
+		t.Errorf("Expected visible item to be 'test_item', got '%s'", result.EnteredRoom.VisibleItems[0].Name)
 	}
 
 	_, err = engine.traverseInternal("lockedDoor")
@@ -677,8 +701,8 @@ func TestTraverseInternal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Traverse by door name failed: %v", err)
 	}
-	if result == nil || result.ToRoom != "RoomA" {
-		t.Error("Expected to traverse to RoomA by door name")
+	if result == nil || result.EnteredRoom.RoomName != "RoomA" {
+		t.Error("Expected traverse result, got nil")
 	}
 	if engine.CurrentRoom.Name != "RoomA" {
 		t.Error("Player should be in RoomA after traverse by door name")
@@ -690,8 +714,8 @@ func TestTraverseInternal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Traverse by location failed: %v", err)
 	}
-	if result == nil || result.ToRoom != "RoomB" {
-		t.Error("Expected to traverse to RoomB using location")
+	if result == nil {
+		t.Error("Expected traverse result, got nil")
 	}
 	if engine.CurrentRoom.Name != "RoomB" {
 		t.Error("Player should be in RoomB after traverse by location")
@@ -702,8 +726,8 @@ func TestTraverseInternal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Traverse by location failed: %v", err)
 	}
-	if result == nil || result.ToRoom != "RoomA" {
-		t.Error("Expected to traverse to RoomA using location")
+	if result == nil {
+		t.Error("Expected traverse result, got nil")
 	}
 	if engine.CurrentRoom.Name != "RoomA" {
 		t.Error("Player should be in RoomA after traverse by location")
@@ -2712,12 +2736,12 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Fatalf("Traverse to office failed: %v", err)
 	}
 
-	if traverseResult.Result.ToRoom != "office" {
-		t.Errorf("Expected to traverse to office, got %s", traverseResult.Result.ToRoom)
+	if traverseResult.Result.EnteredRoom.RoomName != "office" {
+		t.Errorf("Expected to traverse to office, got %s", traverseResult.Result.EnteredRoom.RoomName)
 	}
 
 	if debugFlag {
-		t.Logf("Traversed to: %s", traverseResult.Result.ToRoom)
+		t.Logf("Traversed to: %s", traverseResult.Result.EnteredRoom.RoomName)
 	}
 
 	// Observe the office
@@ -2859,8 +2883,8 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Fatalf("Traverse back to waiting room failed: %v", err)
 	}
 
-	if traverseResult.Result.ToRoom != "waiting room" {
-		t.Errorf("Expected to traverse back to waiting room, got %s", traverseResult.Result.ToRoom)
+	if traverseResult.Result.EnteredRoom.RoomName != "waiting room" {
+		t.Errorf("Expected to traverse back to waiting room, got %s", traverseResult.Result.EnteredRoom.RoomName)
 	}
 
 	// 8. Go left to storage room
@@ -2869,8 +2893,8 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Fatalf("Traverse to storage room failed: %v", err)
 	}
 
-	if traverseResult.Result.ToRoom != "storage room" {
-		t.Errorf("Expected to traverse to storage room, got %s", traverseResult.Result.ToRoom)
+	if traverseResult.Result.EnteredRoom.RoomName != "storage room" {
+		t.Errorf("Expected to traverse to storage room, got %s", traverseResult.Result.EnteredRoom.RoomName)
 	}
 
 	// Observe the storage room
@@ -3119,8 +3143,8 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Fatalf("Traverse to stairwell failed: %v", err)
 	}
 
-	if traverseResult.Result.ToRoom != "stairwell to roof" {
-		t.Errorf("Expected to traverse to stairwell to roof, got %s", traverseResult.Result.ToRoom)
+	if traverseResult.Result.EnteredRoom.RoomName != "stairwell to roof" {
+		t.Errorf("Expected to traverse to stairwell to roof, got %s", traverseResult.Result.EnteredRoom.RoomName)
 	}
 
 	// Verify we completed the level
