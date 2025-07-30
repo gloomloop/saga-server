@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"adventure-engine/internal/world"
+
+	"gopkg.in/yaml.v3"
 )
 
 // GameData represents the top-level JSON structure
@@ -278,12 +281,31 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 	return level, nil
 }
 
-// LoadGameFromFile loads a game from a JSON file
+// LoadGameFromFile loads a game from a JSON or YAML file
 func LoadGameFromFile(filename string) (*world.Level, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
+
+	// Check if file is YAML based on extension
+	if strings.HasSuffix(strings.ToLower(filename), ".yaml") || strings.HasSuffix(strings.ToLower(filename), ".yml") {
+		// Convert YAML to JSON
+		var v any
+		if err := yaml.Unmarshal(data, &v); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML: %w", err)
+		}
+
+		// Convert to JSON
+		jsonData, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert YAML to JSON: %w", err)
+		}
+
+		return LoadGame(jsonData)
+	}
+
+	// Treat as JSON
 	return LoadGame(data)
 }
 

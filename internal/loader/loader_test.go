@@ -810,6 +810,71 @@ func TestLoadGame_JSONStructureValidation(t *testing.T) {
 	}
 }
 
+func TestLoadGame_DemoYAML(t *testing.T) {
+	// Load the demo puzzle game from YAML
+	level, err := LoadGameFromFile("../testdata/demo.yaml")
+	if err != nil {
+		t.Fatalf("Failed to load game from YAML: %v", err)
+	}
+
+	// Test basic game properties
+	if level.Name != "demo puzzle" {
+		t.Errorf("Expected game name 'demo puzzle', got '%s'", level.Name)
+	}
+
+	// Test rooms
+	if len(level.Rooms) != 4 {
+		t.Errorf("Expected 4 rooms, got %d", len(level.Rooms))
+	}
+
+	// Test doors
+	if len(level.Doors) != 3 {
+		t.Errorf("Expected 3 doors, got %d", len(level.Doors))
+	}
+
+	// Test enemies
+	if len(level.Enemies) != 1 {
+		t.Errorf("Expected 1 enemy, got %d", len(level.Enemies))
+	}
+
+	// Test triggers
+	if len(level.Triggers) != 1 {
+		t.Errorf("Expected 1 trigger, got %d", len(level.Triggers))
+	}
+
+	// Test win condition
+	if level.WinCondition == nil {
+		t.Error("Expected win condition to be set")
+	} else {
+		if level.WinCondition.Event != world.EventRoomEntered {
+			t.Errorf("Expected win condition event to be EventRoomEntered, got %s", level.WinCondition.Event)
+		}
+		if level.WinCondition.RoomName != "stairwell to roof" {
+			t.Errorf("Expected win condition room to be 'stairwell to roof', got '%s'", level.WinCondition.RoomName)
+		}
+	}
+
+	// Test specific room: waiting room
+	waitingRoom := findRoomByName(level.Rooms, "waiting room")
+	if waitingRoom == nil {
+		t.Fatal("Could not find waiting room")
+	}
+
+	if waitingRoom.Description != "a dilapidated waiting room" {
+		t.Errorf("Expected waiting room description 'a dilapidated waiting room', got '%s'", waitingRoom.Description)
+	}
+
+	// Test waiting room connections
+	if len(waitingRoom.Connections) != 3 {
+		t.Errorf("Expected waiting room to have 3 connections, got %d", len(waitingRoom.Connections))
+	}
+
+	// Test waiting room items
+	if len(waitingRoom.Items) != 2 {
+		t.Errorf("Expected waiting room to have 2 items, got %d", len(waitingRoom.Items))
+	}
+}
+
 // Helper functions
 func findRoomByName(rooms []*world.Room, name string) *world.Room {
 	for _, room := range rooms {
