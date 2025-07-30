@@ -79,7 +79,7 @@ class GameClient:
     
     def take(self, target_name: str) -> Dict[str, Any]:
         """Take an item."""
-        return self._make_request("POST", "take", {"name": target_name})
+        return self._make_request("POST", "take", {"target_name": target_name})
     
     def inventory(self) -> Dict[str, Any]:
         """Get player inventory."""
