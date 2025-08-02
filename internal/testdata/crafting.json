@@ -1,0 +1,55 @@
+{
+  "name": "crafting test",
+  "system_prompt_theme": "survival horror",
+  "win_condition": {
+    "event": "enter_room",
+    "room_name": "stairwell to roof"
+  },
+  "rooms": [
+    {
+      "name": "mostly empty room",
+      "description": "a mostly empty room",
+      "connections": [
+        {
+          "location": "right",
+          "door_name": "metal stairwell door"
+        }
+      ],
+      "items": [
+        {
+          "name": "fish hook",
+          "description": "a small fish hook",
+          "location": "middle of the floor",
+          "portable": true
+        },
+        {
+          "name": "dental floss",
+          "description": "a container of dental floss",
+          "location": "middle of the floor",
+          "portable": true
+        }
+      ]
+    },
+    {
+      "name": "stairwell to roof",
+      "description": "a way out"
+    }
+  ],
+  "doors": [
+    {
+      "name": "metal stairwell door",
+      "room_a": "mostly empty room",
+      "room_b": "stairwell to roof"
+    }
+  ],
+  "combo_items": [
+    {
+      "input_item_a_name": "fish hook",
+      "input_item_b_name": "dental floss",
+      "output_item": {
+        "name": "retrieval tool",
+        "description": "it could help you retrieve items from hard to reach places"
+      }
+    }
+  ]
+}

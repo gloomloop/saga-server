@@ -12,14 +12,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ComboItemData represents a combination item in the JSON
+type ComboItemData struct {
+	InputItemAName string   `json:"input_item_a_name"`
+	InputItemBName string   `json:"input_item_b_name"`
+	OutputItem     ItemData `json:"output_item"`
+}
+
 // GameData represents the top-level JSON structure
 type GameData struct {
-	Name              string      `json:"name"`
-	SystemPromptTheme string      `json:"system_prompt_theme"`
-	WinCondition      *EventData  `json:"win_condition"`
-	Rooms             []RoomData  `json:"rooms"`
-	DoorData          []DoorData  `json:"doors"`
-	Enemies           []EnemyData `json:"enemies"`
+	Name              string          `json:"name"`
+	SystemPromptTheme string          `json:"system_prompt_theme"`
+	WinCondition      *EventData      `json:"win_condition"`
+	Rooms             []RoomData      `json:"rooms"`
+	DoorData          []DoorData      `json:"doors"`
+	Enemies           []EnemyData     `json:"enemies"`
+	ComboItems        []ComboItemData `json:"combo_items,omitempty"`
 }
 
 // EventData represents an event in the JSON
@@ -70,6 +78,12 @@ func (cc *ContainerContents) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("invalid container contents")
 }
 
+// FixtureData represents a fixture in the JSON
+type FixtureData struct {
+	RequiredItems []string  `json:"required_items"`
+	Produces      *ItemData `json:"produces"`
+}
+
 // ItemData represents an item in the JSON
 type ItemData struct {
 	Name         string             `json:"name"`
@@ -85,6 +99,7 @@ type ItemData struct {
 	Code         string             `json:"code,omitempty"`
 	Conceals     *ItemData          `json:"conceals,omitempty"`
 	Contains     *ContainerContents `json:"contains,omitempty"`
+	Fixture      *FixtureData       `json:"fixture,omitempty"`
 }
 
 // DoorData represents a door in the JSON
@@ -267,6 +282,22 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 		doors = append(doors, door)
 	}
 
+	// Create combo items
+	var comboItems []*world.ComboItem
+	for _, comboItemData := range gameData.ComboItems {
+		outputItem, err := createItem(comboItemData.OutputItem)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create combo item output %s: %w", comboItemData.OutputItem.Name, err)
+		}
+
+		comboItem := &world.ComboItem{
+			InputItemAName: comboItemData.InputItemAName,
+			InputItemBName: comboItemData.InputItemBName,
+			OutputItem:     outputItem,
+		}
+		comboItems = append(comboItems, comboItem)
+	}
+
 	// Create level
 	level := &world.Level{
 		Name:         gameData.Name,
@@ -275,6 +306,7 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 		Enemies:      enemies,
 		Triggers:     triggers,
 		WinCondition: winCondition,
+		ComboItems:   comboItems,
 	}
 
 	// Validate reachability
@@ -330,7 +362,7 @@ func validateJSONStructure(data json.RawMessage) error {
 	}
 
 	// Check for optional fields (these are allowed but not required)
-	optionalFields := []string{"win_condition", "doors", "enemies", "system_prompt_theme"}
+	optionalFields := []string{"win_condition", "doors", "enemies", "system_prompt_theme", "combo_items"}
 
 	// Check for any unexpected fields
 	allowedFields := make(map[string]bool)
@@ -559,6 +591,30 @@ func createItem(itemData ItemData) (*world.Item, error) {
 		item.Concealer = &world.Concealer{
 			Hidden:    hidden,
 			Uncovered: false,
+		}
+	}
+
+	// Handle fixtures
+	if itemData.Fixture != nil {
+		// Convert the list of required items to a map with all items initially false
+		requiredItems := make(map[string]bool)
+		for _, itemName := range itemData.Fixture.RequiredItems {
+			requiredItems[itemName] = false
+		}
+
+		// Create the produced item if specified
+		var producedItem *world.Item
+		if itemData.Fixture.Produces != nil {
+			var err error
+			producedItem, err = createItem(*itemData.Fixture.Produces)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create produced item for fixture %s: %w", itemData.Name, err)
+			}
+		}
+
+		item.Fixture = &world.Fixture{
+			RequiredItems: requiredItems,
+			Produces:      producedItem,
 		}
 	}
 

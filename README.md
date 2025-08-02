@@ -41,6 +41,8 @@ This repo comes with a REPL client for testing purposes.
     ║    heal <item>                - Use a health item            ║
     ║    go <direction/room>        - Move to another room         ║
     ║    battle <weapon>            - Battle an enemy              ║
+    ║    combine <item1> <item2>    - Combine two items            ║
+    ║    use <item> <target>        - Use an item on a target      ║
     ║    info                       - Show session info            ║
     ║    debug                      - Show debug information       ║
     ║    quit                       - Exit the game                ║
@@ -49,8 +51,11 @@ This repo comes with a REPL client for testing purposes.
     ║    observe                                                   ║
     ║    inspect "tattered grey hoodie"                            ║
     ║    take "energy drink"                                       ║
-    ║    go left                                                   ║
+    ║    go east                                                   ║
     ║    unlock "2468" "safe"                                      ║
+    ║    unlock "iron key" "metal stairwell door"                  ║
+    ║    combine "wire" "battery"                                  ║
+    ║    use "crowbar" "wooden plank"                              ║
     ╚══════════════════════════════════════════════════════════════╝
     ```
 

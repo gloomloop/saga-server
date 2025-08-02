@@ -331,12 +331,6 @@ func inventory(c *gin.Context) {
 		return
 	}
 
-	var requestBody v1.InventoryRequest
-	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid InventoryRequest", "details": err.Error()})
-		return
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -433,4 +427,58 @@ func battle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, v1.EngineResultToResponseBattle(result))
+}
+
+// combine handles combine action requests
+func combine(c *gin.Context) {
+	sid := c.Param("sid")
+	s := safeGetSessionFromStore(sid, c)
+	if s == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		return
+	}
+
+	var requestBody v1.CombineRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CombineRequest", "details": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.Engine.Combine(requestBody.InputItemAName, requestBody.InputItemBName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseCombine(result))
+}
+
+// use handles use action requests
+func use(c *gin.Context) {
+	sid := c.Param("sid")
+	s := safeGetSessionFromStore(sid, c)
+	if s == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		return
+	}
+
+	var requestBody v1.UseRequest
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UseRequest", "details": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.Engine.Use(requestBody.ItemName, requestBody.TargetName)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseUse(result))
 }

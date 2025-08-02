@@ -154,8 +154,9 @@ func (e *Engine) handleEvent(event *world.Event) *EngineStateChangeNotification 
 type EngineStateInfo struct {
 	LevelCompletionState          LevelCompletionState
 	Mode                          Mode
+	PlayerHealth                  world.HealthState
 	EngineStateChangeNotification *EngineStateChangeNotification
-	FightingEnemy                 string
+	FightingEnemy                 *world.Enemy
 }
 
 // --- public wrapper results ---
@@ -210,11 +211,23 @@ type BattleResult struct {
 	Result          battleResultInternal
 }
 
+type CombineResult struct {
+	EngineStateInfo EngineStateInfo
+	Result          combineResultInternal
+}
+
+type UseResult struct {
+	EngineStateInfo EngineStateInfo
+	Result          useResultInternal
+}
+
 // getEngineStateInfo returns the current engine state info.
 func (e *Engine) getEngineStateInfo() *EngineStateInfo {
 	return &EngineStateInfo{
 		LevelCompletionState: e.LevelCompletionState,
 		Mode:                 e.Mode,
+		PlayerHealth:         e.Player.Health,
+		FightingEnemy:        e.FightingEnemy,
 	}
 }
 
@@ -233,6 +246,9 @@ func (e *Engine) assertValidEngineState() {
 func (e *Engine) checkLevelComplete() error {
 	if e.LevelCompletionState == LevelCompletionStateComplete {
 		return errors.New("level is already complete")
+	}
+	if e.Player.Health == world.HealthDead {
+		return errors.New("player is dead")
 	}
 	return nil
 }
@@ -258,15 +274,17 @@ func (e *Engine) ensureInvestigationMode() error {
 //
 // The following actions are allowed in all modes:
 // - Observe
-// - Inspect
+// - Inventory
 // - Heal
 //
 // The following actions are allowed in investigation mode:
+// - Inspect
 // - Uncover
 // - Unlock
 // - Search
 // - Take
 // - Traverse
+// - Combine
 //
 // The following actions are allowed in combat mode:
 // - Battle
@@ -325,7 +343,7 @@ func (e *Engine) Observe() (*ObserveResult, error) {
 // Inspect inspects an item or door by name.
 // Returns an InspectResult and engine state info.
 func (e *Engine) Inspect(name string) (*InspectResult, error) {
-	if err := e.validateEngineState(); err != nil {
+	if err := e.validateEngineStateForInvestigationActions(); err != nil {
 		return nil, err
 	}
 	inspectResult, err := e.inspectInternal(name)
@@ -494,6 +512,36 @@ func (e *Engine) Battle(weaponName string) (*BattleResult, error) {
 	}, nil
 }
 
+// Combine crafts a new item by combining two input items.
+// Returns a CombineResult and engine state info.
+func (e *Engine) Combine(inputItemAName string, inputItemBName string) (*CombineResult, error) {
+	if err := e.validateEngineStateForInvestigationActions(); err != nil {
+		return nil, err
+	}
+	combineResult, err := e.combineInternal(inputItemAName, inputItemBName)
+	if err != nil {
+		return nil, err
+	}
+	return &CombineResult{
+		EngineStateInfo: *e.getEngineStateInfo(),
+		Result:          *combineResult,
+	}, nil
+}
+
+func (e *Engine) Use(itemName string, targetName string) (*UseResult, error) {
+	if err := e.validateEngineStateForInvestigationActions(); err != nil {
+		return nil, err
+	}
+	useResult, err := e.useInternal(itemName, targetName)
+	if err != nil {
+		return nil, err
+	}
+	return &UseResult{
+		EngineStateInfo: *e.getEngineStateInfo(),
+		Result:          *useResult,
+	}, nil
+}
+
 // --- internal helpers ---
 
 // ItemInfo contains the basic information about an item, excluding detail.
@@ -508,6 +556,7 @@ type ItemInfo struct {
 	IsAmmoBox    bool
 	IsWeapon     bool
 	IsHealthItem bool
+	IsFixture    bool
 
 	// Container-specific fields
 	HasKeyLock  bool
@@ -559,6 +608,7 @@ func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 		IsAmmoBox:    item.IsAmmoBox(),
 		IsWeapon:     item.IsWeapon(),
 		IsHealthItem: item.IsHealthItem(),
+		IsFixture:    item.IsFixture(),
 		IsUncovered:  item.IsConcealer() && item.Concealer.Uncovered,
 	}
 
@@ -742,6 +792,18 @@ type battleResultInternal struct {
 	PlayerAlive bool
 }
 
+// combineResultInternal is the result of combining two items.
+type combineResultInternal struct {
+	CraftedItem ItemInfo
+}
+
+type useResultInternal struct {
+	FixtureName  string
+	UsedItemName string
+	ProducedItem *ItemInfo
+	IsComplete   bool
+}
+
 // --- internal methods ---
 
 // Observe returns the current room's name, description, and visible items and doors.
@@ -760,7 +822,6 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 		door := e.Level.GetDoor(conn.DoorName)
 		doorInfo := e.createDoorInfo(door)
 		doorInfo.Location = conn.Location
-		fmt.Printf("conn: %+v, doorInfo.Location: %s\n", conn, doorInfo.Location)
 		result.Doors = append(result.Doors, doorInfo)
 	}
 	return result, nil
@@ -1083,6 +1144,73 @@ func (e *Engine) battleInternal(weaponName string) (*battleResultInternal, error
 		WonRound:    wonRound,
 		EnemyAlive:  e.FightingEnemy.IsAlive(),
 		PlayerAlive: e.Player.IsAlive(),
+	}, nil
+}
+
+// Combine crafts a new item by combining two input items.
+func (e *Engine) combineInternal(inputItemAName string, inputItemBName string) (*combineResultInternal, error) {
+	// Verify both items are in the player's inventory
+	_, err := e.Player.GetItem(inputItemAName)
+	if err != nil {
+		return nil, err
+	}
+	_, err = e.Player.GetItem(inputItemBName)
+	if err != nil {
+		return nil, err
+	}
+
+	craftedItem, err := e.Level.CombineItems(inputItemAName, inputItemBName)
+	if err != nil {
+		return nil, err
+	}
+	e.Player.RemoveItem(inputItemAName)
+	e.Player.RemoveItem(inputItemBName)
+	e.Player.Inventory = append(e.Player.Inventory, craftedItem)
+	return &combineResultInternal{
+		CraftedItem: e.createItemInfo(craftedItem),
+	}, nil
+}
+
+func (e *Engine) useInternal(itemName string, targetName string) (*useResultInternal, error) {
+	// Verify the item is in the player's inventory
+	_, err := e.Player.GetItem(itemName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the target fixture in the current room
+	targetFixture, err := e.CurrentRoom.GetItem(targetName)
+	if err != nil {
+		return nil, fmt.Errorf("fixture %s not found in current room", targetName)
+	}
+
+	if !targetFixture.IsFixture() {
+		return nil, fmt.Errorf("%s is not a fixture", targetName)
+	}
+
+	// Use the item on the fixture
+	result, err := targetFixture.Fixture.UseItem(itemName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove the used item from player's inventory
+	e.Player.RemoveItem(itemName)
+
+	// If the fixture produced an item, add it to player's inventory
+	var producedItemInfo *ItemInfo
+	if result.Item != nil {
+		e.Player.Inventory = append(e.Player.Inventory, result.Item)
+		itemInfo := e.createItemInfo(result.Item)
+		itemInfo.Location = "inventory" // Override location since it's now in inventory
+		producedItemInfo = &itemInfo
+	}
+
+	return &useResultInternal{
+		FixtureName:  targetName,
+		UsedItemName: itemName,
+		ProducedItem: producedItemInfo,
+		IsComplete:   targetFixture.Fixture.IsComplete(),
 	}, nil
 }
 

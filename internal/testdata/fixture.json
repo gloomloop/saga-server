@@ -1,0 +1,128 @@
+{
+  "name": "fixture test",
+  "system_prompt_theme": "survival horror",
+  "win_condition": {
+    "event": "enter_room",
+    "room_name": "balcony"
+  },
+  "rooms": [
+    {
+      "name": "bathroom",
+      "description": "a bathroom",
+      "connections": [
+        {
+          "location": "behind",
+          "door_name": "bedroom door"
+        }
+      ],
+      "items": [
+        {
+          "name": "fish hook",
+          "description": "a small fish hook",
+          "location": "middle of the floor",
+          "portable": true
+        },
+        {
+          "name": "dental floss",
+          "description": "a container of dental floss",
+          "location": "middle of the floor",
+          "portable": true
+        },
+        {
+          "name": "bathtub",
+          "description": "a bathtub",
+          "location": "against the wall"
+        },
+        {
+          "name": "bathtub drain",
+          "description": "a bathtub drain with a key stuck in it",
+          "location": "in the bathtub",
+          "fixture": {
+            "required_items": [
+              "retrieval tool"
+            ],
+            "produces": {
+              "name": "bedroom key",
+              "description": "a key that opens the bathtub drain",
+              "portable": true,
+              "key": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "bedroom",
+      "description": "a bedroom",
+      "connections": [
+        {
+          "location": "to the right",
+          "door_name": "balcony door"
+        }
+      ],
+      "items": [
+        {
+          "name": "altar",
+          "description": "a mysterious altar",
+          "location": "on the dresser",
+          "fixture": {
+            "required_items": [
+              "stone",
+              "candle"
+            ],
+            "produces": {
+              "name": "balcony key",
+              "description": "a key that opens the balcony door",
+              "portable": true,
+              "key": true
+            }
+          }
+        },
+        {
+          "name": "stone",
+          "description": "a stone",
+          "location": "on the bed",
+          "portable": true
+        },
+        {
+          "name": "candle",
+          "description": "a candle",
+          "location": "on the floor",
+          "portable": true
+        }
+      ]
+    },
+    {
+      "name": "balcony",
+      "description": "a balcony"
+    }
+  ],
+  "doors": [
+    {
+      "name": "bedroom door",
+      "description": "a wooden door",
+      "room_a": "bathroom",
+      "room_b": "bedroom",
+      "locked": true,
+      "required_key_name": "bedroom key"
+    },
+    {
+      "name": "balcony door",
+      "description": "a glass door",
+      "room_a": "bedroom",
+      "room_b": "balcony",
+      "locked": true,
+      "required_key_name": "balcony key"
+    }
+  ],
+  "combo_items": [
+    {
+      "input_item_a_name": "fish hook",
+      "input_item_b_name": "dental floss",
+      "output_item": {
+        "name": "retrieval tool",
+        "description": "it could help you retrieve items from hard to reach places"
+      }
+    }
+  ]
+}

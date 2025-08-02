@@ -3175,3 +3175,333 @@ func TestIntegration_DemoPuzzleComplete(t *testing.T) {
 		t.Logf("Integration test completed successfully!")
 	}
 }
+
+func TestCombineInternal(t *testing.T) {
+	// Create the input items
+	fishHook := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "fish hook",
+			Description: "A small metal fish hook",
+		},
+		Location: "inventory",
+		Detail:   "It's sharp and pointy.",
+		Portable: &world.Portable{},
+	}
+
+	dentalFloss := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "dental floss",
+			Description: "A spool of dental floss",
+		},
+		Location: "inventory",
+		Detail:   "It's thin and strong.",
+		Portable: &world.Portable{},
+	}
+
+	machineScrew := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "machine screw",
+			Description: "A small machine screw",
+		},
+		Location: "inventory",
+		Detail:   "It's threaded and metallic.",
+		Portable: &world.Portable{},
+	}
+
+	// Create the output item (retrieval tool)
+	retrievalTool := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "retrieval tool",
+			Description: "A makeshift retrieval tool",
+		},
+		Location: "inventory",
+		Detail:   "A fish hook tied to dental floss - perfect for reaching small items.",
+		Portable: &world.Portable{},
+	}
+
+	// Create the combo item definition
+	comboItem := &world.ComboItem{
+		InputItemAName: "fish hook",
+		InputItemBName: "dental floss",
+		OutputItem:     retrievalTool,
+	}
+
+	// Create a simple room
+	room := &world.Room{
+		BaseEntity: world.BaseEntity{
+			Name:        "room",
+			Description: "A test room",
+		},
+		Connections: []*world.Connection{},
+		Items:       []*world.Item{},
+	}
+
+	engine := NewEngine(&world.Level{
+		Rooms:        []*world.Room{room},
+		ComboItems:   []*world.ComboItem{comboItem},
+		WinCondition: nil,
+	})
+
+	// Add the three items to player's inventory
+	engine.Player.Inventory = append(engine.Player.Inventory, fishHook, dentalFloss, machineScrew)
+
+	// Test 1: Try an invalid combination (fish hook + machine screw)
+	_, err := engine.combineInternal("fish hook", "machine screw")
+	if err == nil {
+		t.Error("Expected error when combining fish hook with machine screw, got nil")
+	} else if !strings.Contains(err.Error(), "you can't combine the fish hook and machine screw") {
+		t.Errorf("Expected error message about invalid combination, got: %s", err.Error())
+	}
+
+	// Verify items are still in inventory
+	if len(engine.Player.Inventory) != 3 {
+		t.Errorf("Expected 3 items in inventory after failed combination, got %d", len(engine.Player.Inventory))
+	}
+
+	// Test 2: Try a valid combination (fish hook + dental floss)
+	result, err := engine.combineInternal("fish hook", "dental floss")
+	if err != nil {
+		t.Errorf("Combine failed: %v", err)
+	}
+
+	// Verify the result
+	if result.CraftedItem.Name != "retrieval tool" {
+		t.Errorf("Expected crafted item name 'retrieval tool', got '%s'", result.CraftedItem.Name)
+	}
+	if result.CraftedItem.Description != "A makeshift retrieval tool" {
+		t.Errorf("Expected crafted item description 'A makeshift retrieval tool', got '%s'", result.CraftedItem.Description)
+	}
+
+	// Verify input items were removed from inventory
+	if len(engine.Player.Inventory) != 2 {
+		t.Errorf("Expected 2 items in inventory after successful combination, got %d", len(engine.Player.Inventory))
+	}
+
+	// Check that fish hook and dental floss are gone
+	fishHookFound := false
+	dentalFlossFound := false
+	for _, item := range engine.Player.Inventory {
+		if item.Name == "fish hook" {
+			fishHookFound = true
+		}
+		if item.Name == "dental floss" {
+			dentalFlossFound = true
+		}
+	}
+	if fishHookFound {
+		t.Error("Expected fish hook to be removed from inventory after combination")
+	}
+	if dentalFlossFound {
+		t.Error("Expected dental floss to be removed from inventory after combination")
+	}
+
+	// Check that retrieval tool and machine screw are still in inventory
+	retrievalToolFound := false
+	machineScrewFound := false
+	for _, item := range engine.Player.Inventory {
+		if item.Name == "retrieval tool" {
+			retrievalToolFound = true
+		}
+		if item.Name == "machine screw" {
+			machineScrewFound = true
+		}
+	}
+	if !retrievalToolFound {
+		t.Error("Expected retrieval tool to be in inventory after combination")
+	}
+	if !machineScrewFound {
+		t.Error("Expected machine screw to remain in inventory after combination")
+	}
+
+	// Test 3: Try the combination in reverse order (dental floss + fish hook)
+	// First, add the items back to inventory
+	engine.Player.Inventory = append(engine.Player.Inventory, fishHook, dentalFloss)
+
+	result, err = engine.combineInternal("dental floss", "fish hook")
+	if err != nil {
+		t.Errorf("Reverse order combine failed: %v", err)
+	}
+
+	if result.CraftedItem.Name != "retrieval tool" {
+		t.Errorf("Expected crafted item name 'retrieval tool' in reverse order, got '%s'", result.CraftedItem.Name)
+	}
+}
+
+func TestUseInternal(t *testing.T) {
+	// Create a simple level with a fixture
+	level := &world.Level{
+		Rooms: []*world.Room{
+			{
+				BaseEntity: world.BaseEntity{
+					Name:        "test room",
+					Description: "a test room",
+				},
+				Items: []*world.Item{
+					{
+						BaseEntity: world.BaseEntity{
+							Name:        "altar",
+							Description: "a mysterious altar",
+						},
+						Location: "center",
+						Fixture: &world.Fixture{
+							RequiredItems: map[string]bool{
+								"stone":  false,
+								"candle": false,
+							},
+							Produces: &world.Item{
+								BaseEntity: world.BaseEntity{
+									Name:        "magic key",
+									Description: "a magical key",
+								},
+								Location: "inventory",
+								Key:      &world.Key{},
+								Portable: &world.Portable{},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	engine := NewEngine(level)
+
+	// Add items to player inventory
+	stone := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "stone",
+			Description: "a stone",
+		},
+		Location: "inventory",
+		Portable: &world.Portable{},
+	}
+	candle := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "candle",
+			Description: "a candle",
+		},
+		Location: "inventory",
+		Portable: &world.Portable{},
+	}
+	engine.Player.Inventory = append(engine.Player.Inventory, stone, candle)
+
+	// Test using stone on altar
+	result, err := engine.useInternal("stone", "altar")
+	if err != nil {
+		t.Fatalf("Failed to use stone on altar: %v", err)
+	}
+
+	if result.FixtureName != "altar" {
+		t.Errorf("Expected fixture name 'altar', got '%s'", result.FixtureName)
+	}
+
+	if result.UsedItemName != "stone" {
+		t.Errorf("Expected used item name 'stone', got '%s'", result.UsedItemName)
+	}
+
+	if result.ProducedItem != nil {
+		t.Error("Expected no produced item after using stone alone")
+	}
+
+	if result.IsComplete {
+		t.Error("Expected fixture to not be complete after using stone alone")
+	}
+
+	// Verify stone was removed from inventory
+	if len(engine.Player.Inventory) != 1 {
+		t.Errorf("Expected 1 item in inventory, got %d", len(engine.Player.Inventory))
+	}
+
+	if engine.Player.Inventory[0].Name != "candle" {
+		t.Errorf("Expected remaining item to be 'candle', got '%s'", engine.Player.Inventory[0].Name)
+	}
+
+	// Test using candle on altar (should complete the fixture)
+	result, err = engine.useInternal("candle", "altar")
+	if err != nil {
+		t.Fatalf("Failed to use candle on altar: %v", err)
+	}
+
+	if !result.IsComplete {
+		t.Error("Expected fixture to be complete after using both items")
+	}
+
+	if result.ProducedItem == nil {
+		t.Fatal("Expected produced item after completing fixture")
+	}
+
+	if result.ProducedItem.Name != "magic key" {
+		t.Errorf("Expected produced item name 'magic key', got '%s'", result.ProducedItem.Name)
+	}
+
+	if result.ProducedItem.Location != "inventory" {
+		t.Errorf("Expected produced item location 'inventory', got '%s'", result.ProducedItem.Location)
+	}
+
+	// Verify candle was removed and magic key was added
+	if len(engine.Player.Inventory) != 1 {
+		t.Errorf("Expected 1 item in inventory, got %d", len(engine.Player.Inventory))
+	}
+
+	if engine.Player.Inventory[0].Name != "magic key" {
+		t.Errorf("Expected remaining item to be 'magic key', got '%s'", engine.Player.Inventory[0].Name)
+	}
+}
+
+func TestUse_Errors(t *testing.T) {
+	level := &world.Level{
+		Rooms: []*world.Room{
+			{
+				BaseEntity: world.BaseEntity{
+					Name:        "test room",
+					Description: "a test room",
+				},
+				Items: []*world.Item{
+					{
+						BaseEntity: world.BaseEntity{
+							Name:        "altar",
+							Description: "a mysterious altar",
+						},
+						Location: "center",
+						Fixture: &world.Fixture{
+							RequiredItems: map[string]bool{
+								"stone": false,
+							},
+							Produces: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	engine := NewEngine(level)
+
+	// Test using item not in inventory
+	_, err := engine.useInternal("stone", "altar")
+	if err == nil {
+		t.Fatal("Expected error when using item not in inventory")
+	}
+
+	// Test using item on non-fixture
+	stone := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "stone",
+			Description: "a stone",
+		},
+		Location: "inventory",
+		Portable: &world.Portable{},
+	}
+	engine.Player.Inventory = append(engine.Player.Inventory, stone)
+
+	_, err = engine.useInternal("stone", "non-existent")
+	if err == nil {
+		t.Fatal("Expected error when using item on non-existent target")
+	}
+
+	// Test using wrong item on fixture
+	_, err = engine.useInternal("wrong_item", "altar")
+	if err == nil {
+		t.Fatal("Expected error when using wrong item on fixture")
+	}
+}

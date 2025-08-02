@@ -7,18 +7,18 @@ import (
 
 // --- engine state ---
 
-type NotificationMessage string
-
-const (
-	NotificationMessageEnterCombat NotificationMessage = "An enemy appeared!"
-)
+type FightingEnemy struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	HP          int    `json:"hp"`
+}
 
 type EngineStateInfo struct {
-	LevelCompletionState string `json:"level_completion"`
-	Mode                 string `json:"mode"`
-	FightingEnemy        string `json:"fighting_enemy,omitempty"`
-	Notification         string `json:"notification,omitempty"`
-	NotificationMessage  string `json:"notification_message,omitempty"`
+	LevelCompletionState string         `json:"level_completion"`
+	Mode                 string         `json:"mode"`
+	PlayerHealth         string         `json:"player_health"`
+	FightingEnemy        *FightingEnemy `json:"fighting_enemy,omitempty"`
+	Notification         string         `json:"notification,omitempty"`
 }
 
 // --- session management ---
@@ -61,7 +61,7 @@ type ObserveRequest struct{}
 
 type ObserveResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	RoomInfo        RoomInfo `json:"room_info"`
+	RoomInfo        *RoomInfo `json:"room_info,omitempty"`
 }
 
 type InspectRequest struct {
@@ -150,6 +150,27 @@ type BattleResponse struct {
 	PlayerAlive     bool   `json:"player_alive"`
 }
 
+type CombineRequest struct {
+	InputItemAName string `json:"item_a_name" binding:"required"`
+	InputItemBName string `json:"item_b_name" binding:"required"`
+}
+
+type CombineResponse struct {
+	EngineStateInfo `json:"engine_state"`
+	CraftedItem     ItemInfo `json:"crafted_item"`
+}
+
+type UseRequest struct {
+	ItemName   string `json:"item_name" binding:"required"`
+	TargetName string `json:"target_name" binding:"required"`
+}
+
+type UseResponse struct {
+	EngineStateInfo `json:"engine_state"`
+	AcceptedItem    bool      `json:"accepted_item"`
+	ProducedItem    *ItemInfo `json:"produced_item,omitempty"`
+}
+
 type ItemInfo struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
@@ -202,15 +223,18 @@ func EngineResultToResponseObserve(result *engine.ObserveResult) *ObserveRespons
 		doors[i] = *getResponseDoorInfo(&door)
 	}
 
-	return &ObserveResponse{
+	observeResponse := &ObserveResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
-		RoomInfo: RoomInfo{
+	}
+	if result.EngineStateInfo.Mode == engine.Investigation {
+		observeResponse.RoomInfo = &RoomInfo{
 			RoomName:        result.Result.RoomName,
 			RoomDescription: result.Result.RoomDescription,
 			VisibleItems:    items,
 			Doors:           doors,
-		},
+		}
 	}
+	return observeResponse
 }
 
 // engineResultToResponseInspect translates an engine.InspectResult to an InspectResponse
@@ -329,6 +353,26 @@ func EngineResultToResponseBattle(result *engine.BattleResult) *BattleResponse {
 	}
 }
 
+// engineResultToResponseCombine translates an engine.CombineResult to a CombineResponse
+func EngineResultToResponseCombine(result *engine.CombineResult) *CombineResponse {
+	return &CombineResponse{
+		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
+		CraftedItem:     *getResponseItemInfo(&result.Result.CraftedItem),
+	}
+}
+
+// engineResultToResponseUse translates an engine.UseResult to a UseResponse
+func EngineResultToResponseUse(result *engine.UseResult) *UseResponse {
+	useResponse := &UseResponse{
+		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
+		AcceptedItem:    true,
+	}
+	if result.Result.ProducedItem != nil {
+		useResponse.ProducedItem = getResponseItemInfo(result.Result.ProducedItem)
+	}
+	return useResponse
+}
+
 // --- private helpers ---
 
 func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
@@ -388,14 +432,17 @@ func getResponseEngineStateInfo(engineState *engine.EngineStateInfo) *EngineStat
 	engineStateInfo := &EngineStateInfo{
 		LevelCompletionState: string(engineState.LevelCompletionState),
 		Mode:                 string(engineState.Mode),
+		PlayerHealth:         string(engineState.PlayerHealth),
+	}
+	if engineState.FightingEnemy != nil {
+		engineStateInfo.FightingEnemy = &FightingEnemy{
+			Name:        engineState.FightingEnemy.BaseEntity.Name,
+			Description: engineState.FightingEnemy.BaseEntity.Description,
+			HP:          engineState.FightingEnemy.HP,
+		}
 	}
 	if engineState.EngineStateChangeNotification != nil {
 		engineStateInfo.Notification = string(*engineState.EngineStateChangeNotification)
-		switch *engineState.EngineStateChangeNotification {
-		case engine.EngineStateChangeEnterCombat:
-			engineStateInfo.FightingEnemy = engineState.FightingEnemy
-			engineStateInfo.NotificationMessage = string(NotificationMessageEnterCombat)
-		}
 	}
 	return engineStateInfo
 }

@@ -26,6 +26,8 @@ func SetupRoutes(r *gin.Engine) {
 			sess.POST("/heal", heal)
 			sess.POST("/traverse", traverse)
 			sess.POST("/battle", battle)
+			sess.POST("/combine", combine)
+			sess.POST("/use", use)
 		}
 	}
 }

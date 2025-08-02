@@ -911,3 +911,141 @@ func findEnemyByName(enemies []*world.Enemy, name string) *world.Enemy {
 	}
 	return nil
 }
+
+func TestLoadGame_ComboItems(t *testing.T) {
+	// Load the crafting test game
+	level, err := LoadGameFromFile("../testdata/crafting.json")
+	if err != nil {
+		t.Fatalf("Failed to load game: %v", err)
+	}
+
+	// Test combo items
+	if len(level.ComboItems) != 1 {
+		t.Errorf("Expected 1 combo item, got %d", len(level.ComboItems))
+	}
+
+	combo := level.ComboItems[0]
+	if combo.InputItemAName != "fish hook" {
+		t.Errorf("Expected input item A to be 'fish hook', got '%s'", combo.InputItemAName)
+	}
+	if combo.InputItemBName != "dental floss" {
+		t.Errorf("Expected input item B to be 'dental floss', got '%s'", combo.InputItemBName)
+	}
+	if combo.OutputItem.Name != "retrieval tool" {
+		t.Errorf("Expected output item to be 'retrieval tool', got '%s'", combo.OutputItem.Name)
+	}
+}
+
+func TestLoadGame_Fixtures(t *testing.T) {
+	// Load the fixture test game
+	level, err := LoadGameFromFile("../testdata/fixture.json")
+	if err != nil {
+		t.Fatalf("Failed to load game: %v", err)
+	}
+
+	// Test basic game properties
+	if level.Name != "fixture test" {
+		t.Errorf("Expected game name 'fixture test', got '%s'", level.Name)
+	}
+
+	// Test rooms
+	if len(level.Rooms) != 3 {
+		t.Errorf("Expected 3 rooms, got %d", len(level.Rooms))
+	}
+
+	// Test doors
+	if len(level.Doors) != 2 {
+		t.Errorf("Expected 2 doors, got %d", len(level.Doors))
+	}
+
+	// Test combo items
+	if len(level.ComboItems) != 1 {
+		t.Errorf("Expected 1 combo item, got %d", len(level.ComboItems))
+	}
+
+	// Test bathroom fixtures
+	bathroom := findRoomByName(level.Rooms, "bathroom")
+	if bathroom == nil {
+		t.Fatal("Could not find bathroom")
+	}
+
+	// Test bathtub drain fixture
+	bathtubDrain := findItemByName(bathroom.Items, "bathtub drain")
+	if bathtubDrain == nil {
+		t.Fatal("Could not find bathtub drain")
+	}
+
+	if !bathtubDrain.IsFixture() {
+		t.Error("Expected bathtub drain to be a fixture")
+	}
+
+	if bathtubDrain.Fixture == nil {
+		t.Fatal("Expected bathtub drain to have fixture data")
+	}
+
+	if len(bathtubDrain.Fixture.RequiredItems) != 1 {
+		t.Errorf("Expected bathtub drain to require 1 item, got %d", len(bathtubDrain.Fixture.RequiredItems))
+	}
+
+	// Check that "retrieval tool" is in the required items map (value should be false initially)
+	if _, exists := bathtubDrain.Fixture.RequiredItems["retrieval tool"]; !exists {
+		t.Error("Expected bathtub drain to require 'retrieval tool'")
+	}
+
+	if bathtubDrain.Fixture.Produces == nil {
+		t.Fatal("Expected bathtub drain fixture to have produced item")
+	}
+
+	if bathtubDrain.Fixture.Produces.Name != "bedroom key" {
+		t.Errorf("Expected bathtub drain to produce 'bedroom key', got '%s'", bathtubDrain.Fixture.Produces.Name)
+	}
+
+	if !bathtubDrain.Fixture.Produces.IsKey() {
+		t.Error("Expected produced item to be a key")
+	}
+
+	// Test bedroom fixtures
+	bedroom := findRoomByName(level.Rooms, "bedroom")
+	if bedroom == nil {
+		t.Fatal("Could not find bedroom")
+	}
+
+	// Test altar fixture
+	altar := findItemByName(bedroom.Items, "altar")
+	if altar == nil {
+		t.Fatal("Could not find altar")
+	}
+
+	if !altar.IsFixture() {
+		t.Error("Expected altar to be a fixture")
+	}
+
+	if altar.Fixture == nil {
+		t.Fatal("Expected altar to have fixture data")
+	}
+
+	if len(altar.Fixture.RequiredItems) != 2 {
+		t.Errorf("Expected altar to require 2 items, got %d", len(altar.Fixture.RequiredItems))
+	}
+
+	// Check required items (should be false initially)
+	if _, exists := altar.Fixture.RequiredItems["stone"]; !exists {
+		t.Error("Expected altar to require 'stone'")
+	}
+
+	if _, exists := altar.Fixture.RequiredItems["candle"]; !exists {
+		t.Error("Expected altar to require 'candle'")
+	}
+
+	if altar.Fixture.Produces == nil {
+		t.Fatal("Expected altar fixture to have produced item")
+	}
+
+	if altar.Fixture.Produces.Name != "balcony key" {
+		t.Errorf("Expected altar to produce 'balcony key', got '%s'", altar.Fixture.Produces.Name)
+	}
+
+	if !altar.Fixture.Produces.IsKey() {
+		t.Error("Expected produced item to be a key")
+	}
+}

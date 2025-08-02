@@ -1,6 +1,9 @@
 package world
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // --- base entity ---
 
@@ -60,6 +63,60 @@ const (
 // HealthItem restores health.
 type HealthItem struct {
 	HealthEffect
+}
+
+// Fixture is a type of (usually non-portable) item that other items can be "used" on.
+// A fixture requires one or more items before it produces a new item.
+// Examples include altars, vending machines, a bathtub drain with a key stuck in it, etc.
+//
+// Note on Fixtures vs Containers:
+//
+// A fixture is distinct from a Container in that it cannot be searched, does not have a
+// standard lock state, and the produced item is automatically added to the player's inventory.
+// Additionally, fixtures will also support custom messages upon player interaction.
+// Finally, unlike Containers which may be empty or contain non-essential items, completion of
+// fixtures is always required to progress through the level.
+//
+// In the future we will add event handling for fixtures, but for now they only support
+// producing items.
+type Fixture struct {
+	RequiredItems map[string]bool
+	Produces      *Item
+}
+
+type FixtureUseResult struct {
+	Item *Item
+	// TODO: custom message when item is accepted
+}
+
+// --- fixture component methods ---
+
+// IsComplete checks if all required items have been applied to the fixture.
+func (f *Fixture) IsComplete() bool {
+	for _, requiredItem := range f.RequiredItems {
+		if !requiredItem {
+			return false
+		}
+	}
+	return true
+}
+
+// UseItem uses an item on a fixture.
+func (f *Fixture) UseItem(itemName string) (*FixtureUseResult, error) {
+	// Assumes no duplicate items in the level, and that the engine
+	// destroys items after successful use on a fixture.
+	if _, ok := f.RequiredItems[itemName]; !ok {
+		return nil, fmt.Errorf("you can't use a %s on this", itemName)
+	}
+	f.RequiredItems[itemName] = true
+	if f.IsComplete() {
+		return &FixtureUseResult{
+			Item: f.Produces,
+		}, nil
+	}
+	return &FixtureUseResult{
+		Item: nil,
+	}, nil
 }
 
 // Lock may secure a Portal *or* a Container.

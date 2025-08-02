@@ -21,6 +21,7 @@ type Item struct {
 	Concealer  *Concealer
 	AmmoBox    *AmmoBox
 	HealthItem *HealthItem
+	Fixture    *Fixture
 }
 
 // Door connects two rooms; it may be locked.
@@ -43,6 +44,13 @@ type Room struct {
 	BaseEntity
 	Connections []*Connection
 	Items       []*Item
+}
+
+// ComboItem contains a combination item and the names of the required input items.
+type ComboItem struct {
+	InputItemAName string
+	InputItemBName string
+	OutputItem     *Item
 }
 
 type TriggerEvent string
@@ -116,6 +124,7 @@ func (it *Item) IsContainer() bool  { return it.Container != nil }
 func (it *Item) IsConcealer() bool  { return it.Concealer != nil }
 func (it *Item) IsAmmoBox() bool    { return it.AmmoBox != nil }
 func (it *Item) IsHealthItem() bool { return it.HealthItem != nil }
+func (it *Item) IsFixture() bool    { return it.Fixture != nil }
 
 // Validate a newly created item.
 func (it *Item) ValidateInitialState() error {
@@ -146,6 +155,11 @@ func (it *Item) ValidateInitialState() error {
 		}
 		if it.Concealer.Hidden != nil && it.Concealer.Hidden.IsConcealer() {
 			return errors.New("concealers cannot be nested")
+		}
+	}
+	if it.IsFixture() {
+		if it.IsPortable() || it.IsContainer() || it.IsConcealer() || it.IsKey() || it.IsWeapon() {
+			return errors.New("invalid fixture")
 		}
 	}
 	return nil
@@ -202,7 +216,7 @@ func (p *Player) GetItem(name string) (*Item, error) {
 			return item, nil
 		}
 	}
-	return nil, fmt.Errorf("you don't have a %s", name)
+	return nil, fmt.Errorf("you don't have a %s in your inventory", name)
 }
 
 // RemoveItem removes an item from the player's inventory.
@@ -215,7 +229,7 @@ func (p *Player) RemoveItem(name string) (*Item, error) {
 			return it, nil
 		}
 	}
-	return nil, fmt.Errorf("you don't have a %s", name)
+	return nil, fmt.Errorf("you don't have a %s in your inventory", name)
 }
 
 func (p *Player) IncreaseHealth() {
@@ -292,6 +306,20 @@ type Level struct {
 	Enemies      []*Enemy
 	Triggers     []*Trigger
 	WinCondition *Event
+	ComboItems   []*ComboItem
+}
+
+// CombineItems crafts a new item by combining two input items.
+// Returns the new item or an error if the combination is not possible.
+// The engine is responsible for removing input items from the player's inventory.
+func (l *Level) CombineItems(inputItemAName string, inputItemBName string) (*Item, error) {
+	for _, comboItem := range l.ComboItems {
+		if comboItem.InputItemAName == inputItemAName && comboItem.InputItemBName == inputItemBName ||
+			comboItem.InputItemAName == inputItemBName && comboItem.InputItemBName == inputItemAName {
+			return comboItem.OutputItem, nil
+		}
+	}
+	return nil, fmt.Errorf("you can't combine the %s and %s", inputItemAName, inputItemBName)
 }
 
 // GetEnemy returns an enemy by name.
