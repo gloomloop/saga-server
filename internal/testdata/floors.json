@@ -1,0 +1,95 @@
+{
+  "name": "multi floor test",
+  "system_prompt_theme": "survival horror",
+  "win_condition": {
+    "event": "enter_room",
+    "room_name": "room on roof"
+  },
+  "floors": [
+    {
+      "name": "first floor",
+      "description": "the first floor of the building",
+      "rooms": [
+        {
+          "name": "room on first floor",
+          "description": "a room on the first floor",
+          "connections": [
+            {
+              "location": "ahead",
+              "door_name": "first floor stairwell door"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "second floor",
+      "description": "the second floor of the building",
+      "rooms": [
+        {
+          "name": "room on second floor",
+          "description": "a room on the second floor",
+          "connections": [
+            {
+              "location": "ahead",
+              "door_name": "second floor stairwell door"
+            },
+            {
+              "location": "behind",
+              "door_name": "first floor stairwell door"
+            },
+            {
+              "location": "right",
+              "door_name": "door to another room on second floor"
+            }
+          ]
+        },
+        {
+          "name": "another room on second floor",
+          "description": "its just another empty room on the second floor",
+          "connections": [
+            {
+              "location": "behind",
+              "door_name": "door to another room on second floor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "roof",
+      "description": "the roof of the building",
+      "rooms": [
+        {
+          "name": "room on roof",
+          "description": "a room on the roof",
+          "connections": [
+            {
+              "location": "behind",
+              "door_name": "second floor stairwell door"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "doors": [
+    {
+      "name": "first floor stairwell door",
+      "room_a": "room on first floor",
+      "room_b": "room on second floor",
+      "stairwell": true
+    },
+    {
+      "name": "second floor stairwell door",
+      "room_a": "room on second floor",
+      "room_b": "room on roof",
+      "stairwell": true
+    },
+    {
+      "name": "door to another room on second floor",
+      "room_a": "room on second floor",
+      "room_b": "another room on second floor"
+    }
+  ]
+}

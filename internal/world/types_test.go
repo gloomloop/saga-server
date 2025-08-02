@@ -602,10 +602,7 @@ func TestConcealedCabinet(t *testing.T) {
 func TestLockedDoor(t *testing.T) {
 	// Create a locked door
 	door := &Door{
-		BaseEntity: BaseEntity{
-			Name:        "iron_door",
-			Description: "A heavy iron door",
-		},
+		Name:  "iron_door",
 		RoomA: "room_a",
 		RoomB: "room_b",
 		Lock: &Lock{

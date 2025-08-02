@@ -24,12 +24,21 @@ type Item struct {
 	Fixture    *Fixture
 }
 
+// Latch locks a door from one side only.
+type Latch struct {
+	Locked     bool
+	LockedFrom string // "room_a" or "room_b"
+}
+
 // Door connects two rooms; it may be locked.
 type Door struct {
-	BaseEntity
-	RoomA string
-	RoomB string
-	Lock  *Lock
+	Name      string
+	RoomA     string
+	RoomB     string
+	Lock      *Lock
+	Stairwell bool // true if the door is a stairwell (connects floors)
+	Latch     *Latch
+	Traversed bool
 }
 
 // Connection represents a door as seen from a specific room.
@@ -167,10 +176,13 @@ func (it *Item) ValidateInitialState() error {
 
 // --- door methods ---
 
-func (d *Door) HasKeyLock() bool  { return d.Lock != nil && d.Lock.KeyName != "" }
-func (d *Door) HasCodeLock() bool { return d.Lock != nil && d.Lock.Code != "" }
-func (d *Door) HasLock() bool     { return d.HasKeyLock() || d.HasCodeLock() }
-func (d *Door) IsLocked() bool    { return d.HasLock() && d.Lock.Locked }
+func (d *Door) HasKeyLock() bool                { return d.Lock != nil && d.Lock.KeyName != "" }
+func (d *Door) HasCodeLock() bool               { return d.Lock != nil && d.Lock.Code != "" }
+func (d *Door) HasLock() bool                   { return d.HasKeyLock() || d.HasCodeLock() }
+func (d *Door) IsLocked() bool                  { return d.HasLock() && d.Lock.Locked }
+func (d *Door) IsLatched() bool                 { return d.Latch != nil && d.Latch.Locked }
+func (d *Door) CanUnlatch(roomName string) bool { return d.Latch.LockedFrom == roomName }
+func (d *Door) Unlatch()                        { d.Latch.Locked = false }
 
 // UnlockWithKey unlocks a door with a key.
 func (d *Door) UnlockWithKey(keyName string) error {
@@ -299,9 +311,15 @@ type Trigger struct {
 
 // --- level ---
 
+type Floor struct {
+	Name        string
+	Description string
+	Rooms       []*Room
+}
+
 type Level struct {
 	Name         string
-	Rooms        []*Room
+	Floors       []*Floor
 	Doors        []*Door
 	Enemies      []*Enemy
 	Triggers     []*Trigger
@@ -332,14 +350,25 @@ func (e *Level) GetEnemy(name string) *Enemy {
 	panic(fmt.Sprintf("no enemy named %s", name))
 }
 
+// GetFloor returns a floor by name.
+func (e *Level) GetFloor(name string) *Floor {
+	for _, floor := range e.Floors {
+		if floor.Name == name {
+			return floor
+		}
+	}
+	panic(fmt.Sprintf("no floor named %s", name))
+}
+
 // GetRoom returns a room by name.
-func (e *Level) GetRoom(name string) *Room {
-	for _, room := range e.Rooms {
-		if room.Name == name {
+func (e *Level) GetRoom(floorName string, roomName string) *Room {
+	floor := e.GetFloor(floorName)
+	for _, room := range floor.Rooms {
+		if room.Name == roomName {
 			return room
 		}
 	}
-	panic(fmt.Sprintf("no room named %s", name))
+	panic(fmt.Sprintf("no room named %s on floor %s", roomName, floorName))
 }
 
 // GetDoor returns a door by name.

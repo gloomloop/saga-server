@@ -20,14 +20,20 @@ type ComboItemData struct {
 }
 
 // GameData represents the top-level JSON structure
+type FloorData struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Rooms       []RoomData `json:"rooms"`
+}
+
 type GameData struct {
-	Name              string          `json:"name"`
-	SystemPromptTheme string          `json:"system_prompt_theme"`
-	WinCondition      *EventData      `json:"win_condition"`
-	Rooms             []RoomData      `json:"rooms"`
-	DoorData          []DoorData      `json:"doors"`
-	Enemies           []EnemyData     `json:"enemies"`
-	ComboItems        []ComboItemData `json:"combo_items,omitempty"`
+	Name         string          `json:"name"`
+	WinCondition *EventData      `json:"win_condition"`
+	Floors       []FloorData     `json:"floors,omitempty"`
+	Rooms        []RoomData      `json:"rooms,omitempty"` // For backward compatibility
+	DoorData     []DoorData      `json:"doors"`
+	Enemies      []EnemyData     `json:"enemies"`
+	ComboItems   []ComboItemData `json:"combo_items,omitempty"`
 }
 
 // EventData represents an event in the JSON
@@ -109,6 +115,8 @@ type DoorData struct {
 	RoomB           string `json:"room_b"`
 	Locked          bool   `json:"locked,omitempty"`
 	RequiredKeyName string `json:"required_key_name,omitempty"`
+	Stairwell       bool   `json:"stairwell,omitempty"`
+	LatchedFrom     string `json:"latched_from,omitempty"`
 }
 
 // EnemyData represents an enemy in the JSON
@@ -138,20 +146,60 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	// Create rooms map for easy lookup
+	// Create rooms map for easy lookup across all floors
 	roomsMap := make(map[string]*world.Room)
 
-	// First pass: create all rooms
-	for _, roomData := range gameData.Rooms {
-		room := &world.Room{
-			BaseEntity: world.BaseEntity{
-				Name:        roomData.Name,
-				Description: roomData.Description,
-			},
-			Connections: []*world.Connection{},
-			Items:       []*world.Item{},
+	// Create floors
+	var floors []*world.Floor
+
+	// Handle new floors format
+	if len(gameData.Floors) > 0 {
+		for _, floorData := range gameData.Floors {
+			floor := &world.Floor{
+				Name:        floorData.Name,
+				Description: floorData.Description,
+				Rooms:       []*world.Room{},
+			}
+
+			// First pass: create all rooms for this floor
+			for _, roomData := range floorData.Rooms {
+				room := &world.Room{
+					BaseEntity: world.BaseEntity{
+						Name:        roomData.Name,
+						Description: roomData.Description,
+					},
+					Connections: []*world.Connection{},
+					Items:       []*world.Item{},
+				}
+				roomsMap[roomData.Name] = room
+				floor.Rooms = append(floor.Rooms, room)
+			}
+
+			floors = append(floors, floor)
 		}
-		roomsMap[roomData.Name] = room
+	} else {
+		// Handle old rooms format for backward compatibility
+		floor := &world.Floor{
+			Name:        "main floor",
+			Description: "the main floor",
+			Rooms:       []*world.Room{},
+		}
+
+		// First pass: create all rooms
+		for _, roomData := range gameData.Rooms {
+			room := &world.Room{
+				BaseEntity: world.BaseEntity{
+					Name:        roomData.Name,
+					Description: roomData.Description,
+				},
+				Connections: []*world.Connection{},
+				Items:       []*world.Item{},
+			}
+			roomsMap[roomData.Name] = room
+			floor.Rooms = append(floor.Rooms, room)
+		}
+
+		floors = append(floors, floor)
 	}
 
 	// Create doors map for easy lookup
@@ -167,40 +215,77 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 			}
 		}
 
+		var latch *world.Latch
+		if doorData.LatchedFrom != "" {
+			latch = &world.Latch{
+				Locked:     true,
+				LockedFrom: doorData.LatchedFrom,
+			}
+		}
+
 		door := &world.Door{
-			BaseEntity: world.BaseEntity{
-				Name:        doorData.Name,
-				Description: fmt.Sprintf("a door leading from %s to %s", doorData.RoomA, doorData.RoomB),
-			},
-			RoomA: doorData.RoomA,
-			RoomB: doorData.RoomB,
-			Lock:  lock,
+			Name:      doorData.Name,
+			RoomA:     doorData.RoomA,
+			RoomB:     doorData.RoomB,
+			Lock:      lock,
+			Stairwell: doorData.Stairwell,
+			Latch:     latch,
 		}
 		doorsMap[doorData.Name] = door
 	}
 
 	// Third pass: populate room connections and items
-	for _, roomData := range gameData.Rooms {
-		room := roomsMap[roomData.Name]
+	if len(gameData.Floors) > 0 {
+		// Handle new floors format
+		for _, floorData := range gameData.Floors {
+			for _, roomData := range floorData.Rooms {
+				room := roomsMap[roomData.Name]
 
-		// Add connections
-		for _, conn := range roomData.Connections {
-			if _, exists := doorsMap[conn.DoorName]; exists {
-				connection := &world.Connection{
-					DoorName: conn.DoorName,
-					Location: conn.Location,
+				// Add connections
+				for _, conn := range roomData.Connections {
+					if _, exists := doorsMap[conn.DoorName]; exists {
+						connection := &world.Connection{
+							DoorName: conn.DoorName,
+							Location: conn.Location,
+						}
+						room.Connections = append(room.Connections, connection)
+					}
 				}
-				room.Connections = append(room.Connections, connection)
+
+				// Add items
+				for _, itemData := range roomData.Items {
+					item, err := createItem(itemData)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create item %s: %w", itemData.Name, err)
+					}
+					room.Items = append(room.Items, item)
+				}
 			}
 		}
+	} else {
+		// Handle old rooms format for backward compatibility
+		for _, roomData := range gameData.Rooms {
+			room := roomsMap[roomData.Name]
 
-		// Add items
-		for _, itemData := range roomData.Items {
-			item, err := createItem(itemData)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create item %s: %w", itemData.Name, err)
+			// Add connections
+			for _, conn := range roomData.Connections {
+				if _, exists := doorsMap[conn.DoorName]; exists {
+					connection := &world.Connection{
+						DoorName: conn.DoorName,
+						Location: conn.Location,
+					}
+					room.Connections = append(room.Connections, connection)
+				}
 			}
-			room.Items = append(room.Items, item)
+
+			// Add items
+			for _, itemData := range roomData.Items {
+				item, err := createItem(itemData)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create item %s: %w", itemData.Name, err)
+				}
+				room.Items = append(room.Items, item)
+			}
 		}
 	}
 
@@ -271,9 +356,20 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 
 	// Convert rooms map to slice, preserving original order
 	var rooms []*world.Room
-	for _, roomData := range gameData.Rooms {
-		room := roomsMap[roomData.Name]
-		rooms = append(rooms, room)
+	if len(gameData.Floors) > 0 {
+		// Handle new floors format
+		for _, floorData := range gameData.Floors {
+			for _, roomData := range floorData.Rooms {
+				room := roomsMap[roomData.Name]
+				rooms = append(rooms, room)
+			}
+		}
+	} else {
+		// Handle old rooms format for backward compatibility
+		for _, roomData := range gameData.Rooms {
+			room := roomsMap[roomData.Name]
+			rooms = append(rooms, room)
+		}
 	}
 
 	// Convert doors map to slice
@@ -301,7 +397,7 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 	// Create level
 	level := &world.Level{
 		Name:         gameData.Name,
-		Rooms:        rooms,
+		Floors:       floors,
 		Doors:        doors,
 		Enemies:      enemies,
 		Triggers:     triggers,
@@ -354,10 +450,17 @@ func validateJSONStructure(data json.RawMessage) error {
 	}
 
 	// Check for required fields
-	requiredFields := []string{"name", "rooms"}
+	requiredFields := []string{"name"}
 	for _, field := range requiredFields {
 		if _, exists := jsonMap[field]; !exists {
 			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	// Check for either floors or rooms (for backward compatibility)
+	if _, hasFloors := jsonMap["floors"]; !hasFloors {
+		if _, hasRooms := jsonMap["rooms"]; !hasRooms {
+			return fmt.Errorf("missing required field: either 'floors' or 'rooms'")
 		}
 	}
 
@@ -369,6 +472,8 @@ func validateJSONStructure(data json.RawMessage) error {
 	for _, field := range requiredFields {
 		allowedFields[field] = true
 	}
+	allowedFields["floors"] = true
+	allowedFields["rooms"] = true // For backward compatibility
 	for _, field := range optionalFields {
 		allowedFields[field] = true
 	}
@@ -384,8 +489,18 @@ func validateJSONStructure(data json.RawMessage) error {
 		return fmt.Errorf("field 'name' must be a non-empty string")
 	}
 
-	if rooms, ok := jsonMap["rooms"].([]interface{}); !ok || len(rooms) == 0 {
-		return fmt.Errorf("field 'rooms' must be a non-empty array")
+	// Validate floors field if present
+	if floors, ok := jsonMap["floors"].([]interface{}); ok {
+		if len(floors) == 0 {
+			return fmt.Errorf("field 'floors' must be a non-empty array")
+		}
+	}
+
+	// Validate rooms field if present (for backward compatibility)
+	if rooms, ok := jsonMap["rooms"].([]interface{}); ok {
+		if len(rooms) == 0 {
+			return fmt.Errorf("field 'rooms' must be a non-empty array")
+		}
 	}
 
 	return nil
@@ -404,14 +519,23 @@ func getSortedKeys(m map[string]bool) []string {
 // validateReachability ensures that all rooms in the level are reachable from each other
 // by performing a breadth-first search starting from the first room
 func validateReachability(level *world.Level) error {
-	if len(level.Rooms) == 0 {
-		return fmt.Errorf("level has no rooms")
+	if len(level.Floors) == 0 {
+		return fmt.Errorf("level has no floors")
+	}
+
+	// Collect all rooms from all floors
+	var allRooms []*world.Room
+	for _, floor := range level.Floors {
+		if len(floor.Rooms) == 0 {
+			return fmt.Errorf("floor %s has no rooms", floor.Name)
+		}
+		allRooms = append(allRooms, floor.Rooms...)
 	}
 
 	// Use BFS to find all reachable rooms
 	visited := make(map[string]bool)
-	queue := []string{level.Rooms[0].Name} // Start from the first room
-	visited[level.Rooms[0].Name] = true
+	queue := []string{allRooms[0].Name} // Start from the first room
+	visited[allRooms[0].Name] = true
 
 	for len(queue) > 0 {
 		currentRoomName := queue[0]
@@ -419,7 +543,7 @@ func validateReachability(level *world.Level) error {
 
 		// Find the current room
 		var currentRoom *world.Room
-		for _, room := range level.Rooms {
+		for _, room := range allRooms {
 			if room.Name == currentRoomName {
 				currentRoom = room
 				break
@@ -462,7 +586,7 @@ func validateReachability(level *world.Level) error {
 
 	// Check if all rooms were visited
 	var unreachableRooms []string
-	for _, room := range level.Rooms {
+	for _, room := range allRooms {
 		if !visited[room.Name] {
 			unreachableRooms = append(unreachableRooms, room.Name)
 		}

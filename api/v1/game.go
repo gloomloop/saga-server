@@ -16,6 +16,8 @@ type FightingEnemy struct {
 type EngineStateInfo struct {
 	LevelCompletionState string         `json:"level_completion"`
 	Mode                 string         `json:"mode"`
+	CurrentFloor         string         `json:"current_floor"`
+	CurrentRoom          string         `json:"current_room"`
 	PlayerHealth         string         `json:"player_health"`
 	FightingEnemy        *FightingEnemy `json:"fighting_enemy,omitempty"`
 	Notification         string         `json:"notification,omitempty"`
@@ -135,7 +137,9 @@ type TraverseRequest struct {
 
 type TraverseResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	EnteredRoom     RoomInfo `json:"entered_room"`
+	EnteredRoom     RoomInfo   `json:"entered_room"`
+	ChangedFloor    *FloorInfo `json:"changed_floor,omitempty"`
+	Unlatched       bool       `json:"unlatched_door,omitempty"`
 }
 
 type BattleRequest struct {
@@ -187,15 +191,22 @@ type ItemInfo struct {
 	IsLocked     bool   `json:"is_locked,omitempty"`
 	Contains     string `json:"contains,omitempty"`
 	Details      string `json:"details,omitempty"`
+	IsFixture    bool   `json:"is_fixture,omitempty"`
 }
 
+// DoorInfo is a door as seen from a specific room, a "materialized" door.
+// The location is relative to the room from which it is observed, and comes from the
+// "connections" field in the room object in the level definition.
 type DoorInfo struct {
 	Name        string `json:"name"`
-	Location    string `json:"location"`
+	Location    string `json:"location,omitempty"`
 	IsLocked    bool   `json:"is_locked,omitempty"`
 	HasKeyLock  bool   `json:"has_key_lock,omitempty"`
 	HasCodeLock bool   `json:"has_code_lock,omitempty"`
 	RoomName    string `json:"room_name,omitempty"`
+	IsStairwell bool   `json:"is_stairwell,omitempty"`
+	IsLatched   bool   `json:"is_locked_from_the_other_side,omitempty"`
+	LeadsTo     string `json:"leads_to,omitempty"`
 }
 
 type RoomInfo struct {
@@ -203,6 +214,11 @@ type RoomInfo struct {
 	RoomDescription string     `json:"description"`
 	VisibleItems    []ItemInfo `json:"visible_items"`
 	Doors           []DoorInfo `json:"connections"`
+}
+
+type FloorInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type AmmoCount struct {
@@ -331,7 +347,7 @@ func EngineResultToResponseTraverse(result *engine.TraverseResult) *TraverseResp
 		doors[i] = *getResponseDoorInfo(&door)
 	}
 
-	return &TraverseResponse{
+	traverseResponse := &TraverseResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
 		EnteredRoom: RoomInfo{
 			RoomName:        result.Result.EnteredRoom.RoomName,
@@ -339,7 +355,15 @@ func EngineResultToResponseTraverse(result *engine.TraverseResult) *TraverseResp
 			VisibleItems:    items,
 			Doors:           doors,
 		},
+		Unlatched: result.Result.Unlatched,
 	}
+	if result.Result.ChangedFloor != nil {
+		traverseResponse.ChangedFloor = &FloorInfo{
+			Name:        result.Result.ChangedFloor.Name,
+			Description: result.Result.ChangedFloor.Description,
+		}
+	}
+	return traverseResponse
 }
 
 // engineResultToResponseBattle translates an engine.BattleResult to a BattleResponse
@@ -391,6 +415,7 @@ func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
 		HasCodeLock:  item.HasCodeLock,
 		IsLocked:     item.IsLocked,
 		Contains:     item.Contains,
+		IsFixture:    item.IsFixture,
 	}
 
 	// Suppress irrelevant information in final response
@@ -418,6 +443,9 @@ func getResponseDoorInfo(door *engine.DoorInfo) *DoorInfo {
 		IsLocked:    door.IsLocked,
 		HasKeyLock:  door.HasKeyLock,
 		HasCodeLock: door.HasCodeLock,
+		IsStairwell: door.IsStairwell,
+		IsLatched:   door.IsLatched,
+		LeadsTo:     door.LeadsTo,
 	}
 
 	// Suppress irrelevant information in final response
@@ -433,6 +461,8 @@ func getResponseEngineStateInfo(engineState *engine.EngineStateInfo) *EngineStat
 		LevelCompletionState: string(engineState.LevelCompletionState),
 		Mode:                 string(engineState.Mode),
 		PlayerHealth:         string(engineState.PlayerHealth),
+		CurrentFloor:         engineState.CurrentFloor.Name,
+		CurrentRoom:          engineState.CurrentRoom.Name,
 	}
 	if engineState.FightingEnemy != nil {
 		engineStateInfo.FightingEnemy = &FightingEnemy{

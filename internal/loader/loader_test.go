@@ -21,8 +21,9 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test rooms
-	if len(level.Rooms) != 4 {
-		t.Errorf("Expected 4 rooms, got %d", len(level.Rooms))
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 4 {
+		t.Errorf("Expected 4 rooms, got %d", len(allRooms))
 	}
 
 	// Test doors
@@ -53,7 +54,7 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test specific room: waiting room
-	waitingRoom := findRoomByName(level.Rooms, "waiting room")
+	waitingRoom := findRoomByName(allRooms, "waiting room")
 	if waitingRoom == nil {
 		t.Fatal("Could not find waiting room")
 	}
@@ -108,7 +109,7 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test specific room: storage room
-	storageRoom := findRoomByName(level.Rooms, "storage room")
+	storageRoom := findRoomByName(allRooms, "storage room")
 	if storageRoom == nil {
 		t.Fatal("Could not find storage room")
 	}
@@ -184,7 +185,7 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test specific room: office
-	office := findRoomByName(level.Rooms, "office")
+	office := findRoomByName(allRooms, "office")
 	if office == nil {
 		t.Fatal("Could not find office")
 	}
@@ -252,7 +253,7 @@ func TestLoadGame_Demo(t *testing.T) {
 	}
 
 	// Test specific room: stairwell to roof
-	stairwell := findRoomByName(level.Rooms, "stairwell to roof")
+	stairwell := findRoomByName(allRooms, "stairwell to roof")
 	if stairwell == nil {
 		t.Fatal("Could not find stairwell to roof")
 	}
@@ -330,15 +331,21 @@ func TestLoadGame_FromRawMessage(t *testing.T) {
 	// Test JSON data as raw message
 	jsonData := json.RawMessage(`{
 		"name": "test game",
-		"rooms": [
+		"floors": [
 			{
-				"name": "test room",
-				"description": "a test room",
-				"items": [
+				"name": "test floor",
+				"description": "a test floor",
+				"rooms": [
 					{
-						"name": "test item",
-						"description": "a test item",
-						"portable": true
+						"name": "test room",
+						"description": "a test room",
+						"items": [
+							{
+								"name": "test item",
+								"description": "a test item",
+								"portable": true
+							}
+						]
 					}
 				]
 			}
@@ -357,16 +364,17 @@ func TestLoadGame_FromRawMessage(t *testing.T) {
 		t.Errorf("Expected game name 'test game', got '%s'", level.Name)
 	}
 
-	if len(level.Rooms) != 1 {
-		t.Errorf("Expected 1 room, got %d", len(level.Rooms))
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 1 {
+		t.Errorf("Expected 1 room, got %d", len(allRooms))
 	}
 
-	if len(level.Rooms[0].Items) != 1 {
-		t.Errorf("Expected 1 item in room, got %d", len(level.Rooms[0].Items))
+	if len(allRooms[0].Items) != 1 {
+		t.Errorf("Expected 1 item in room, got %d", len(allRooms[0].Items))
 	}
 
-	if level.Rooms[0].Items[0].Name != "test item" {
-		t.Errorf("Expected item name 'test item', got '%s'", level.Rooms[0].Items[0].Name)
+	if allRooms[0].Items[0].Name != "test item" {
+		t.Errorf("Expected item name 'test item', got '%s'", allRooms[0].Items[0].Name)
 	}
 }
 
@@ -376,16 +384,22 @@ func TestLoadGame_ValidationErrors(t *testing.T) {
 	// Test 1: Key that is also a container (should fail)
 	jsonData1 := json.RawMessage(`{
 		"name": "test game",
-		"rooms": [
+		"floors": [
 			{
-				"name": "test room",
-				"description": "a test room",
-				"items": [
+				"name": "test floor",
+				"description": "a test floor",
+				"rooms": [
 					{
-						"name": "invalid key",
-						"description": "a key that is also a container",
-						"key": true,
-						"contains": "empty"
+						"name": "test room",
+						"description": "a test room",
+						"items": [
+							{
+								"name": "invalid key",
+								"description": "a key that is also a container",
+								"key": true,
+								"contains": "empty"
+							}
+						]
 					}
 				]
 			}
@@ -404,16 +418,22 @@ func TestLoadGame_ValidationErrors(t *testing.T) {
 	// Test 2: Weapon that is also a container (should fail)
 	jsonData2 := json.RawMessage(`{
 		"name": "test game",
-		"rooms": [
+		"floors": [
 			{
-				"name": "test room",
-				"description": "a test room",
-				"items": [
+				"name": "test floor",
+				"description": "a test floor",
+				"rooms": [
 					{
-						"name": "invalid weapon",
-						"description": "a weapon that is also a container",
-						"weapon_damage": 0.8,
-						"contains": "empty"
+						"name": "test room",
+						"description": "a test room",
+						"items": [
+							{
+								"name": "invalid weapon",
+								"description": "a weapon that is also a container",
+								"weapon_damage": 0.8,
+								"contains": "empty"
+							}
+						]
 					}
 				]
 			}
@@ -432,16 +452,22 @@ func TestLoadGame_ValidationErrors(t *testing.T) {
 	// Test 3: Container that is also a key (should fail)
 	jsonData3 := json.RawMessage(`{
 		"name": "test game",
-		"rooms": [
+		"floors": [
 			{
-				"name": "test room",
-				"description": "a test room",
-				"items": [
+				"name": "test floor",
+				"description": "a test floor",
+				"rooms": [
 					{
-						"name": "invalid container",
-						"description": "a container that is also a key",
-						"key": true,
-						"contains": "empty"
+						"name": "test room",
+						"description": "a test room",
+						"items": [
+							{
+								"name": "invalid container",
+								"description": "a container that is also a key",
+								"key": true,
+								"contains": "empty"
+							}
+						]
 					}
 				]
 			}
@@ -705,7 +731,7 @@ func TestLoadGame_JSONStructureValidation(t *testing.T) {
 	_, err = LoadGame(jsonData2)
 	if err == nil {
 		t.Error("Expected error for missing 'rooms' field, got nil")
-	} else if !strings.Contains(err.Error(), "missing required field: rooms") {
+	} else if !strings.Contains(err.Error(), "missing required field: either 'floors' or 'rooms'") {
 		t.Errorf("Expected error about missing rooms field, got: %v", err)
 	}
 
@@ -823,8 +849,9 @@ func TestLoadGame_DemoYAML(t *testing.T) {
 	}
 
 	// Test rooms
-	if len(level.Rooms) != 4 {
-		t.Errorf("Expected 4 rooms, got %d", len(level.Rooms))
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 4 {
+		t.Errorf("Expected 4 rooms, got %d", len(allRooms))
 	}
 
 	// Test doors
@@ -855,7 +882,7 @@ func TestLoadGame_DemoYAML(t *testing.T) {
 	}
 
 	// Test specific room: waiting room
-	waitingRoom := findRoomByName(level.Rooms, "waiting room")
+	waitingRoom := findRoomByName(allRooms, "waiting room")
 	if waitingRoom == nil {
 		t.Fatal("Could not find waiting room")
 	}
@@ -876,6 +903,14 @@ func TestLoadGame_DemoYAML(t *testing.T) {
 }
 
 // Helper functions
+func getAllRooms(level *world.Level) []*world.Room {
+	var allRooms []*world.Room
+	for _, floor := range level.Floors {
+		allRooms = append(allRooms, floor.Rooms...)
+	}
+	return allRooms
+}
+
 func findRoomByName(rooms []*world.Room, name string) *world.Room {
 	for _, room := range rooms {
 		if room.Name == name {
@@ -949,8 +984,9 @@ func TestLoadGame_Fixtures(t *testing.T) {
 	}
 
 	// Test rooms
-	if len(level.Rooms) != 3 {
-		t.Errorf("Expected 3 rooms, got %d", len(level.Rooms))
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 3 {
+		t.Errorf("Expected 3 rooms, got %d", len(allRooms))
 	}
 
 	// Test doors
@@ -964,7 +1000,7 @@ func TestLoadGame_Fixtures(t *testing.T) {
 	}
 
 	// Test bathroom fixtures
-	bathroom := findRoomByName(level.Rooms, "bathroom")
+	bathroom := findRoomByName(allRooms, "bathroom")
 	if bathroom == nil {
 		t.Fatal("Could not find bathroom")
 	}
@@ -1005,7 +1041,7 @@ func TestLoadGame_Fixtures(t *testing.T) {
 	}
 
 	// Test bedroom fixtures
-	bedroom := findRoomByName(level.Rooms, "bedroom")
+	bedroom := findRoomByName(allRooms, "bedroom")
 	if bedroom == nil {
 		t.Fatal("Could not find bedroom")
 	}
@@ -1047,5 +1083,107 @@ func TestLoadGame_Fixtures(t *testing.T) {
 
 	if !altar.Fixture.Produces.IsKey() {
 		t.Error("Expected produced item to be a key")
+	}
+}
+
+func TestLoadGame_Latches(t *testing.T) {
+	// Load the latch test game
+	level, err := LoadGameFromFile("../testdata/latch.json")
+	if err != nil {
+		t.Fatalf("Failed to load game: %v", err)
+	}
+
+	// Test basic game properties
+	if level.Name != "latch test" {
+		t.Errorf("Expected game name 'latch test', got '%s'", level.Name)
+	}
+
+	// Test rooms
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 3 {
+		t.Errorf("Expected 3 rooms, got %d", len(allRooms))
+	}
+
+	// Test doors
+	if len(level.Doors) != 3 {
+		t.Errorf("Expected 3 doors, got %d", len(level.Doors))
+	}
+
+	// Test door XY - should have a latch
+	doorXY := findDoorByName(level.Doors, "door XY")
+	if doorXY == nil {
+		t.Fatal("Could not find door XY")
+	}
+
+	if !doorXY.IsLatched() {
+		t.Error("Expected door XY to be latched")
+	}
+
+	if doorXY.Latch == nil {
+		t.Fatal("Expected door XY to have latch data")
+	}
+
+	if doorXY.Latch.LockedFrom != "room Y" {
+		t.Errorf("Expected door XY to be latched from 'room Y', got '%s'", doorXY.Latch.LockedFrom)
+	}
+
+	if !doorXY.Latch.Locked {
+		t.Error("Expected door XY latch to be locked")
+	}
+
+	// Test door XZ - should not have a latch
+	doorXZ := findDoorByName(level.Doors, "door XZ")
+	if doorXZ == nil {
+		t.Fatal("Could not find door XZ")
+	}
+
+	if doorXZ.IsLatched() {
+		t.Error("Expected door XZ to not be latched")
+	}
+
+	if doorXZ.Latch != nil {
+		t.Error("Expected door XZ to not have latch data")
+	}
+
+	// Test door ZY - should not have a latch
+	doorZY := findDoorByName(level.Doors, "door ZY")
+	if doorZY == nil {
+		t.Fatal("Could not find door ZY")
+	}
+
+	if doorZY.IsLatched() {
+		t.Error("Expected door ZY to not be latched")
+	}
+
+	if doorZY.Latch != nil {
+		t.Error("Expected door ZY to not have latch data")
+	}
+
+	// Test room connections
+	roomX := findRoomByName(allRooms, "room X")
+	if roomX == nil {
+		t.Fatal("Could not find room X")
+	}
+
+	if len(roomX.Connections) != 2 {
+		t.Errorf("Expected room X to have 2 connections, got %d", len(roomX.Connections))
+	}
+
+	roomY := findRoomByName(allRooms, "room Y")
+	if roomY == nil {
+		t.Fatal("Could not find room Y")
+	}
+
+	if len(roomY.Connections) != 2 {
+		t.Errorf("Expected room Y to have 2 connections, got %d", len(roomY.Connections))
+	}
+
+	roomZ := findRoomByName(allRooms, "room Z")
+	if roomZ == nil {
+		t.Fatal("Could not find room Z")
+	}
+
+	if len(roomZ.Connections) != 2 {
+		t.Errorf("Expected room Z to have 2 connections, got %d", len(roomZ.Connections))
 	}
 }

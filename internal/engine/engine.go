@@ -11,6 +11,7 @@ import (
 type Engine struct {
 	Level                *world.Level
 	Player               *world.Player
+	CurrentFloor         *world.Floor
 	CurrentRoom          *world.Room
 	FightingEnemy        *world.Enemy
 	Rng                  Rng
@@ -29,7 +30,8 @@ func NewEngine(
 			Health:    world.HealthState(world.HealthFine),
 			Ammo:      make(map[string]int),
 		},
-		CurrentRoom:          level.Rooms[0],
+		CurrentFloor:         level.Floors[0],
+		CurrentRoom:          level.GetRoom(level.Floors[0].Name, level.Floors[0].Rooms[0].Name),
 		FightingEnemy:        nil,
 		Rng:                  &DefaultRng{},
 		LevelCompletionState: LevelCompletionStateInProgress,
@@ -104,6 +106,10 @@ func (e *Engine) processTriggers(event *world.Event) *EngineStateChangeNotificat
 // processWinCondition checks if an event matches the win condition.
 // Returns a state change notification if applicable.
 func (e *Engine) processWinCondition(event *world.Event) *EngineStateChangeNotification {
+	if e.Level.WinCondition == nil {
+		return nil
+	}
+
 	switch e.Level.WinCondition.Event {
 	case world.EventRoomEntered:
 		if e.Level.WinCondition.RoomName == event.RoomName {
@@ -153,6 +159,8 @@ func (e *Engine) handleEvent(event *world.Event) *EngineStateChangeNotification 
 // EngineStateInfo contains general engine state info.
 type EngineStateInfo struct {
 	LevelCompletionState          LevelCompletionState
+	CurrentFloor                  *world.Floor
+	CurrentRoom                   *world.Room
 	Mode                          Mode
 	PlayerHealth                  world.HealthState
 	EngineStateChangeNotification *EngineStateChangeNotification
@@ -226,6 +234,8 @@ func (e *Engine) getEngineStateInfo() *EngineStateInfo {
 	return &EngineStateInfo{
 		LevelCompletionState: e.LevelCompletionState,
 		Mode:                 e.Mode,
+		CurrentFloor:         e.CurrentFloor,
+		CurrentRoom:          e.CurrentRoom,
 		PlayerHealth:         e.Player.Health,
 		FightingEnemy:        e.FightingEnemy,
 	}
@@ -576,6 +586,14 @@ type DoorInfo struct {
 	HasKeyLock  bool
 	HasCodeLock bool
 	IsLocked    bool
+	IsStairwell bool
+	IsLatched   bool
+	LeadsTo     string
+}
+
+type FloorInfo struct {
+	Name        string
+	Description string
 }
 
 // ItemInspection contains the details of an inspected item.
@@ -634,7 +652,22 @@ func (e *Engine) createDoorInfo(door *world.Door) DoorInfo {
 		HasKeyLock:  door.HasKeyLock(),
 		HasCodeLock: door.HasCodeLock(),
 		IsLocked:    door.IsLocked(),
+		IsStairwell: door.Stairwell,
 	}
+
+	// Handle latch status based on current room
+	if door.IsLatched() && !door.CanUnlatch(e.CurrentRoom.Name) {
+		result.IsLatched = true
+	}
+
+	if door.Traversed {
+		if e.CurrentRoom.Name == door.RoomA {
+			result.LeadsTo = door.RoomB
+		} else {
+			result.LeadsTo = door.RoomA
+		}
+	}
+
 	return result
 }
 
@@ -781,7 +814,9 @@ type healResultInternal struct {
 
 // traverseResultInternal is the result of traversing between rooms.
 type traverseResultInternal struct {
-	EnteredRoom observeResultInternal
+	EnteredRoom  observeResultInternal
+	ChangedFloor *FloorInfo
+	Unlatched    bool
 }
 
 // battleResultInternal is the result of battling an enemy.
@@ -1083,14 +1118,62 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 		return nil, fmt.Errorf("the %s is locked", door.Name)
 	}
 
-	if door.RoomA == e.CurrentRoom.Name {
-		destinationRoom = e.Level.GetRoom(door.RoomB)
-	} else {
-		destinationRoom = e.Level.GetRoom(door.RoomA)
+	// Check if the door is latched.
+	var unlatched bool
+	if door.IsLatched() {
+		// Check if we can unlatch from this side
+		if door.CanUnlatch(e.CurrentRoom.Name) {
+			// We can unlatch it, so do so
+			door.Unlatch()
+			unlatched = true
+		} else {
+			// We can't unlatch from this side
+			return nil, fmt.Errorf("this door is latched from the other side")
+		}
 	}
 
-	// Move to the destination room
+	// Determine which room is the destination
+	var destinationRoomName string
+	if door.RoomA == e.CurrentRoom.Name {
+		destinationRoomName = door.RoomB
+	} else {
+		destinationRoomName = door.RoomA
+	}
+
+	var destinationFloor *world.Floor
+
+	if door.Stairwell {
+		// Stairwell door: can lead to different floors
+		// Find the floor that contains the destination room
+		for _, floor := range e.Level.Floors {
+			for _, room := range floor.Rooms {
+				if room.Name == destinationRoomName {
+					destinationFloor = floor
+					break
+				}
+			}
+			if destinationFloor != nil {
+				break
+			}
+		}
+
+		if destinationFloor == nil {
+			panic(fmt.Sprintf("destination room %s not found on any floor", destinationRoomName))
+		}
+
+		destinationRoom = e.Level.GetRoom(destinationFloor.Name, destinationRoomName)
+	} else {
+		// Regular door: must stay on the same floor
+		destinationRoom = e.Level.GetRoom(e.CurrentFloor.Name, destinationRoomName)
+		destinationFloor = e.CurrentFloor
+	}
+
+	// Move to the destination room and floor
 	e.CurrentRoom = destinationRoom
+	e.CurrentFloor = destinationFloor
+
+	// Mark the door as traversed
+	door.Traversed = true
 
 	// Get the observation result for the entered room (without event handling)
 	enteredRoomObs, err := e.observeInternal()
@@ -1100,6 +1183,15 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 
 	result := &traverseResultInternal{
 		EnteredRoom: *enteredRoomObs,
+		Unlatched:   unlatched,
+	}
+
+	// Populate the changed floor info if we used a stairwell
+	if door.Stairwell {
+		result.ChangedFloor = &FloorInfo{
+			Name:        destinationFloor.Name,
+			Description: destinationFloor.Description,
+		}
 	}
 
 	return result, nil
@@ -1629,7 +1721,7 @@ func (e *Engine) Debug() (*DebugResult, error) {
 	}
 
 	// Add rooms
-	for _, room := range e.Level.Rooms {
+	for _, room := range e.CurrentFloor.Rooms {
 		result.Rooms = append(result.Rooms, e.createDebugRoomInfo(room, room == e.CurrentRoom))
 	}
 

@@ -1,0 +1,65 @@
+{
+    "name": "latch test",
+    "rooms": [
+        {
+            "name": "room X",
+            "description": "an empty room",
+            "connections": [
+                {
+                    "location": "right",
+                    "door_name": "door XY"
+                },
+                {
+                    "location": "ahead",
+                    "door_name": "door XZ"
+                }
+            ]
+        },
+        {
+            "name": "room Y",
+            "description": "an empty room",
+            "connections": [
+                {
+                    "location": "behind",
+                    "door_name": "door ZY"
+                },
+                {
+                    "location": "left",
+                    "door_name": "door XY"
+                }
+            ]
+        },
+        {
+            "name": "room Z",
+            "description": "an empty room",
+            "connections": [
+                {
+                    "location": "right",
+                    "door_name": "door ZY"
+                },
+                {
+                    "location": "behind",
+                    "door_name": "door XZ"
+                }
+            ]
+        }
+    ],
+    "doors": [
+        {
+            "name": "door XY",
+            "room_a": "room X",
+            "room_b": "room Y",
+            "latched_from": "room Y"
+        },
+        {
+            "name": "door XZ",
+            "room_a": "room X",
+            "room_b": "room Z"
+        },
+        {
+            "name": "door ZY",
+            "room_a": "room Z",
+            "room_b": "room Y"
+        }
+    ]
+}

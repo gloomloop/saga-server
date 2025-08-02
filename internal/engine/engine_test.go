@@ -40,16 +40,17 @@ func TestInspectInternal(t *testing.T) {
 	}
 
 	testDoor := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "test_door",
-			Description: "A test door",
-		},
+		Name:  "test_door",
 		RoomA: "test_room",
 		RoomB: "other_room",
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		Doors:        []*world.Door{testDoor},
 		WinCondition: nil,
 	})
@@ -201,7 +202,11 @@ func TestObserve_Visibility(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -313,7 +318,11 @@ func TestUncoverInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -391,7 +400,11 @@ func TestSearchInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -467,7 +480,11 @@ func TestSearch_LockedContainer(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -549,7 +566,11 @@ func TestTakeInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -619,10 +640,7 @@ func TestTraverseInternal(t *testing.T) {
 
 	// Create an unlocked door between RoomA and RoomB
 	door := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "doorAB",
-			Description: "A door between RoomA and RoomB",
-		},
+		Name:  "doorAB",
 		RoomA: "RoomA",
 		RoomB: "RoomB",
 		Lock:  nil, // unlocked
@@ -638,10 +656,7 @@ func TestTraverseInternal(t *testing.T) {
 
 	// --- Attempt to move through a locked door (should fail) ---
 	lockedDoor := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "lockedDoor",
-			Description: "A locked door to nowhere",
-		},
+		Name:  "lockedDoor",
 		RoomA: "RoomB",
 		RoomB: "RoomC",
 		Lock: &world.Lock{
@@ -651,7 +666,11 @@ func TestTraverseInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{roomA, roomB},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{roomA, roomB},
+		}},
 		Doors:        []*world.Door{door, lockedDoor},
 		WinCondition: nil,
 	})
@@ -776,7 +795,11 @@ func TestTake_UncoverConcealer(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -853,7 +876,11 @@ func TestTake_AmmoBox(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -932,10 +959,7 @@ func TestUnlockInternal(t *testing.T) {
 
 	// Create a door with a key lock
 	lockedDoor := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "locked_door",
-			Description: "A locked door",
-		},
+		Name:  "locked_door",
 		RoomA: "room",
 		RoomB: "other_room",
 		Lock: &world.Lock{
@@ -947,10 +971,7 @@ func TestUnlockInternal(t *testing.T) {
 
 	// Create a door with a code lock
 	codeDoor := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "code_door",
-			Description: "A door with a keypad",
-		},
+		Name:  "code_door",
 		RoomA: "room",
 		RoomB: "secret_room",
 		Lock: &world.Lock{
@@ -979,7 +1000,11 @@ func TestUnlockInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		Doors:        []*world.Door{lockedDoor, codeDoor},
 		WinCondition: nil,
 	})
@@ -1136,7 +1161,11 @@ func TestHealInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -1239,7 +1268,11 @@ func TestHeal_RemovesHealthItemFromInventory(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -1323,7 +1356,11 @@ func TestBattleInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -1510,7 +1547,11 @@ func TestBattle_WeaponDamageLogic(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.FightingEnemy = enemy
@@ -1576,19 +1617,13 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 
 	// Create doors between the rooms
 	door1 := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "door1",
-			Description: "A door between Room1 and Room2",
-		},
+		Name:  "door1",
 		RoomA: "Room1",
 		RoomB: "Room2",
 		Lock:  nil, // unlocked
 	}
 	door2 := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "door2",
-			Description: "A door between Room2 and Room3",
-		},
+		Name:  "door2",
 		RoomA: "Room2",
 		RoomB: "Room3",
 		Lock:  nil, // unlocked
@@ -1617,7 +1652,11 @@ func TestEventHandling_LevelCompletionOnRoomEntry(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room1, room2, room3},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room1, room2, room3},
+		}},
 		Doors:        []*world.Door{door1, door2},
 		WinCondition: winCondition,
 	})
@@ -1706,7 +1745,11 @@ func TestEventHandling_EnterCombatOnTakeGem(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		Enemies:      []*world.Enemy{enemy},
 		Triggers:     []*world.Trigger{trigger},
 		WinCondition: nil,
@@ -1816,10 +1859,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 
 	// Create a locked door between the rooms
 	door := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "treasure_door",
-			Description: "A heavy door to the treasure room",
-		},
+		Name:  "treasure_door",
 		RoomA: "room",
 		RoomB: "treasure_room",
 		Lock: &world.Lock{
@@ -1843,7 +1883,11 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{startRoom, winRoom},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{startRoom, winRoom},
+		}},
 		Doors:        []*world.Door{door},
 		Enemies:      []*world.Enemy{enemy},
 		Triggers:     []*world.Trigger{trigger},
@@ -1966,7 +2010,11 @@ func TestFireWeapon_WithAndWithoutAmmo(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -2026,7 +2074,11 @@ func TestTake_RemovesItemFromRoom(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -2057,7 +2109,11 @@ func TestValidation_ActionNotAllowedInMode(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -2133,19 +2189,13 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 
 	// Create doors between rooms
 	door1 := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "door1",
-			Description: "A door between Room1 and Room2",
-		},
+		Name:  "door1",
 		RoomA: "Room1",
 		RoomB: "Room2",
 		Lock:  nil,
 	}
 	door2 := &world.Door{
-		BaseEntity: world.BaseEntity{
-			Name:        "door2",
-			Description: "A door between Room2 and Room3",
-		},
+		Name:  "door2",
 		RoomA: "Room2",
 		RoomB: "Room3",
 		Lock:  nil,
@@ -2206,7 +2256,11 @@ func TestEventHandling_CombatEntryExitMultipleEnemies(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room1, room2, room3},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room1, room2, room3},
+		}},
 		Doors:        []*world.Door{door1, door2},
 		Enemies:      []*world.Enemy{enemy1, enemy2},
 		Triggers:     []*world.Trigger{trigger1, trigger2},
@@ -2337,7 +2391,11 @@ func TestDebug_SimpleRoomSetup(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -2541,7 +2599,11 @@ func TestDebug_SearchChestAndTakeGem(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 	engine.CurrentRoom = room
@@ -2610,7 +2672,11 @@ func TestWeaponAmmo_StartWithOneBullet(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		WinCondition: nil,
 	})
 
@@ -3237,7 +3303,11 @@ func TestCombineInternal(t *testing.T) {
 	}
 
 	engine := NewEngine(&world.Level{
-		Rooms:        []*world.Room{room},
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
 		ComboItems:   []*world.ComboItem{comboItem},
 		WinCondition: nil,
 	})
@@ -3330,32 +3400,38 @@ func TestCombineInternal(t *testing.T) {
 func TestUseInternal(t *testing.T) {
 	// Create a simple level with a fixture
 	level := &world.Level{
-		Rooms: []*world.Room{
+		Floors: []*world.Floor{
 			{
-				BaseEntity: world.BaseEntity{
-					Name:        "test room",
-					Description: "a test room",
-				},
-				Items: []*world.Item{
+				Name:        "test floor",
+				Description: "a test floor",
+				Rooms: []*world.Room{
 					{
 						BaseEntity: world.BaseEntity{
-							Name:        "altar",
-							Description: "a mysterious altar",
+							Name:        "test room",
+							Description: "a test room",
 						},
-						Location: "center",
-						Fixture: &world.Fixture{
-							RequiredItems: map[string]bool{
-								"stone":  false,
-								"candle": false,
-							},
-							Produces: &world.Item{
+						Items: []*world.Item{
+							{
 								BaseEntity: world.BaseEntity{
-									Name:        "magic key",
-									Description: "a magical key",
+									Name:        "altar",
+									Description: "a mysterious altar",
 								},
-								Location: "inventory",
-								Key:      &world.Key{},
-								Portable: &world.Portable{},
+								Location: "center",
+								Fixture: &world.Fixture{
+									RequiredItems: map[string]bool{
+										"stone":  false,
+										"candle": false,
+									},
+									Produces: &world.Item{
+										BaseEntity: world.BaseEntity{
+											Name:        "magic key",
+											Description: "a magical key",
+										},
+										Location: "inventory",
+										Key:      &world.Key{},
+										Portable: &world.Portable{},
+									},
+								},
 							},
 						},
 					},
@@ -3450,24 +3526,30 @@ func TestUseInternal(t *testing.T) {
 
 func TestUse_Errors(t *testing.T) {
 	level := &world.Level{
-		Rooms: []*world.Room{
+		Floors: []*world.Floor{
 			{
-				BaseEntity: world.BaseEntity{
-					Name:        "test room",
-					Description: "a test room",
-				},
-				Items: []*world.Item{
+				Name:        "test floor",
+				Description: "a test floor",
+				Rooms: []*world.Room{
 					{
 						BaseEntity: world.BaseEntity{
-							Name:        "altar",
-							Description: "a mysterious altar",
+							Name:        "test room",
+							Description: "a test room",
 						},
-						Location: "center",
-						Fixture: &world.Fixture{
-							RequiredItems: map[string]bool{
-								"stone": false,
+						Items: []*world.Item{
+							{
+								BaseEntity: world.BaseEntity{
+									Name:        "altar",
+									Description: "a mysterious altar",
+								},
+								Location: "center",
+								Fixture: &world.Fixture{
+									RequiredItems: map[string]bool{
+										"stone": false,
+									},
+									Produces: nil,
+								},
 							},
-							Produces: nil,
 						},
 					},
 				},
@@ -3503,5 +3585,237 @@ func TestUse_Errors(t *testing.T) {
 	_, err = engine.useInternal("wrong_item", "altar")
 	if err == nil {
 		t.Fatal("Expected error when using wrong item on fixture")
+	}
+}
+
+func TestFloors_MultiFloorTraversal(t *testing.T) {
+	// Create a level with multiple floors based on floors.json
+	level := &world.Level{
+		Name: "multi floor test",
+		Floors: []*world.Floor{
+			{
+				Name:        "first floor",
+				Description: "the first floor of the building",
+				Rooms: []*world.Room{
+					{
+						BaseEntity: world.BaseEntity{
+							Name:        "room on first floor",
+							Description: "a room on the first floor",
+						},
+						Connections: []*world.Connection{
+							{
+								DoorName: "first floor stairwell door",
+								Location: "ahead",
+							},
+						},
+						Items: []*world.Item{},
+					},
+				},
+			},
+			{
+				Name:        "second floor",
+				Description: "the second floor of the building",
+				Rooms: []*world.Room{
+					{
+						BaseEntity: world.BaseEntity{
+							Name:        "room on second floor",
+							Description: "a room on the second floor",
+						},
+						Connections: []*world.Connection{
+							{
+								DoorName: "second floor stairwell door",
+								Location: "ahead",
+							},
+							{
+								DoorName: "first floor stairwell door",
+								Location: "behind",
+							},
+						},
+						Items: []*world.Item{},
+					},
+				},
+			},
+			{
+				Name:        "roof",
+				Description: "the roof of the building",
+				Rooms: []*world.Room{
+					{
+						BaseEntity: world.BaseEntity{
+							Name:        "room on roof",
+							Description: "a room on the roof",
+						},
+						Connections: []*world.Connection{
+							{
+								DoorName: "second floor stairwell door",
+								Location: "behind",
+							},
+						},
+						Items: []*world.Item{},
+					},
+				},
+			},
+		},
+		Doors: []*world.Door{
+			{
+				Name:      "first floor stairwell door",
+				RoomA:     "room on first floor",
+				RoomB:     "room on second floor",
+				Stairwell: true,
+			},
+			{
+				Name:      "second floor stairwell door",
+				RoomA:     "room on second floor",
+				RoomB:     "room on roof",
+				Stairwell: true,
+			},
+		},
+		WinCondition: &world.Event{
+			Event:    world.EventRoomEntered,
+			RoomName: "room on roof",
+		},
+	}
+
+	engine := NewEngine(level)
+
+	// Test initial state
+	if engine.CurrentFloor.Name != "first floor" {
+		t.Errorf("Expected to start on first floor, got %s", engine.CurrentFloor.Name)
+	}
+
+	if engine.CurrentRoom.Name != "room on first floor" {
+		t.Errorf("Expected to start in room on first floor, got %s", engine.CurrentRoom.Name)
+	}
+
+	// Test observing the first room
+	obs, err := engine.observeInternal()
+	if err != nil {
+		t.Fatalf("Failed to observe first room: %v", err)
+	}
+
+	if obs.RoomName != "room on first floor" {
+		t.Errorf("Expected room name 'room on first floor', got '%s'", obs.RoomName)
+	}
+
+	if len(obs.Doors) != 1 {
+		t.Errorf("Expected 1 door in first room, got %d", len(obs.Doors))
+	}
+
+	if obs.Doors[0].Name != "first floor stairwell door" {
+		t.Errorf("Expected door name 'first floor stairwell door', got '%s'", obs.Doors[0].Name)
+	}
+
+	// Test traversing to second floor
+	traverseResult, err := engine.traverseInternal("ahead")
+	if err != nil {
+		t.Fatalf("Failed to traverse to second floor: %v", err)
+	}
+
+	if traverseResult.EnteredRoom.RoomName != "room on second floor" {
+		t.Errorf("Expected to enter 'room on second floor', got '%s'", traverseResult.EnteredRoom.RoomName)
+	}
+
+	// Verify engine state updated correctly
+	if engine.CurrentFloor.Name != "second floor" {
+		t.Errorf("Expected to be on second floor after traversal, got %s", engine.CurrentFloor.Name)
+	}
+
+	if engine.CurrentRoom.Name != "room on second floor" {
+		t.Errorf("Expected to be in room on second floor after traversal, got %s", engine.CurrentRoom.Name)
+	}
+
+	// Test observing the second room
+	obs, err = engine.observeInternal()
+	if err != nil {
+		t.Fatalf("Failed to observe second room: %v", err)
+	}
+
+	if obs.RoomName != "room on second floor" {
+		t.Errorf("Expected room name 'room on second floor', got '%s'", obs.RoomName)
+	}
+
+	if len(obs.Doors) != 2 {
+		t.Errorf("Expected 2 doors in second room, got %d", len(obs.Doors))
+	}
+
+	// Test traversing to roof
+	traverseResult, err = engine.traverseInternal("ahead")
+	if err != nil {
+		t.Fatalf("Failed to traverse to roof: %v", err)
+	}
+
+	if traverseResult.EnteredRoom.RoomName != "room on roof" {
+		t.Errorf("Expected to enter 'room on roof', got '%s'", traverseResult.EnteredRoom.RoomName)
+	}
+
+	// Verify engine state updated correctly
+	if engine.CurrentFloor.Name != "roof" {
+		t.Errorf("Expected to be on roof after traversal, got %s", engine.CurrentFloor.Name)
+	}
+
+	if engine.CurrentRoom.Name != "room on roof" {
+		t.Errorf("Expected to be in room on roof after traversal, got %s", engine.CurrentRoom.Name)
+	}
+
+	// Test observing the roof room
+	obs, err = engine.observeInternal()
+	if err != nil {
+		t.Fatalf("Failed to observe roof room: %v", err)
+	}
+
+	if obs.RoomName != "room on roof" {
+		t.Errorf("Expected room name 'room on roof', got '%s'", obs.RoomName)
+	}
+
+	if len(obs.Doors) != 1 {
+		t.Errorf("Expected 1 door in roof room, got %d", len(obs.Doors))
+	}
+
+	// Test traversing back down to second floor
+	traverseResult, err = engine.traverseInternal("behind")
+	if err != nil {
+		t.Fatalf("Failed to traverse back to second floor: %v", err)
+	}
+
+	if traverseResult.EnteredRoom.RoomName != "room on second floor" {
+		t.Errorf("Expected to enter 'room on second floor', got '%s'", traverseResult.EnteredRoom.RoomName)
+	}
+
+	// Test traversing back to first floor
+	traverseResult, err = engine.traverseInternal("behind")
+	if err != nil {
+		t.Fatalf("Failed to traverse back to first floor: %v", err)
+	}
+
+	if traverseResult.EnteredRoom.RoomName != "room on first floor" {
+		t.Errorf("Expected to enter 'room on first floor', got '%s'", traverseResult.EnteredRoom.RoomName)
+	}
+
+	// Test that stairwell doors are properly marked
+	firstDoor := level.Doors[0]
+	if !firstDoor.Stairwell {
+		t.Error("Expected first floor stairwell door to be marked as stairwell")
+	}
+
+	secondDoor := level.Doors[1]
+	if !secondDoor.Stairwell {
+		t.Error("Expected second floor stairwell door to be marked as stairwell")
+	}
+
+	// Test debug functionality with floors
+	debugResult, err := engine.Debug()
+	if err != nil {
+		t.Fatalf("Failed to get debug info: %v", err)
+	}
+
+	if debugResult.EngineState.CurrentRoom != "room on first floor" {
+		t.Errorf("Expected debug to show current room as 'room on first floor', got '%s'", debugResult.EngineState.CurrentRoom)
+	}
+
+	if len(debugResult.Rooms) != 1 {
+		t.Errorf("Expected debug to show 1 room (from current floor), got %d", len(debugResult.Rooms))
+	}
+
+	if debugResult.Rooms[0].Name != "room on first floor" {
+		t.Errorf("Expected debug to show room 'room on first floor', got '%s'", debugResult.Rooms[0].Name)
 	}
 }
