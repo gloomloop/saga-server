@@ -63,7 +63,7 @@ type ObserveRequest struct{}
 
 type ObserveResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	RoomInfo        *RoomInfo `json:"room_info,omitempty"`
+	RoomInfo        RoomInfo `json:"room_info,omitempty"`
 }
 
 type InspectRequest struct {
@@ -111,7 +111,7 @@ type TakeRequest struct {
 
 type TakeResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	TakenItem       *ItemInfo `json:"taken_item"`
+	TakenItem       ItemInfo `json:"taken_item"`
 }
 
 type InventoryRequest struct{}
@@ -173,6 +173,14 @@ type UseResponse struct {
 	EngineStateInfo `json:"engine_state"`
 	AcceptedItem    bool      `json:"accepted_item"`
 	ProducedItem    *ItemInfo `json:"produced_item,omitempty"`
+}
+
+type ContextRequest struct{}
+
+type ContextResponse struct {
+	EngineStateInfo `json:"engine_state"`
+	RoomInfo        RoomInfo   `json:"room_info"`
+	Inventory       []ItemInfo `json:"inventory"`
 }
 
 type ItemInfo struct {
@@ -243,7 +251,7 @@ func EngineResultToResponseObserve(result *engine.ObserveResult) *ObserveRespons
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
 	}
 	if result.EngineStateInfo.Mode == engine.Investigation {
-		observeResponse.RoomInfo = &RoomInfo{
+		observeResponse.RoomInfo = RoomInfo{
 			RoomName:        result.Result.RoomName,
 			RoomDescription: result.Result.RoomDescription,
 			VisibleItems:    items,
@@ -301,7 +309,7 @@ func EngineResultToResponseSearch(result *engine.SearchResult) *SearchResponse {
 func EngineResultToResponseTake(result *engine.TakeResult) *TakeResponse {
 	return &TakeResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
-		TakenItem:       getResponseItemInfo(&result.Result.ItemInfo),
+		TakenItem:       *getResponseItemInfo(&result.Result.ItemInfo),
 	}
 }
 
@@ -395,6 +403,14 @@ func EngineResultToResponseUse(result *engine.UseResult) *UseResponse {
 		useResponse.ProducedItem = getResponseItemInfo(result.Result.ProducedItem)
 	}
 	return useResponse
+}
+
+func EngineResultToResponseContext(observeResult *engine.ObserveResult, inventoryResult *engine.InventoryResult) *ContextResponse {
+	return &ContextResponse{
+		EngineStateInfo: *getResponseEngineStateInfo(&observeResult.EngineStateInfo),
+		RoomInfo:        EngineResultToResponseObserve(observeResult).RoomInfo,
+		Inventory:       EngineResultToResponseInventory(inventoryResult).Inventory,
+	}
 }
 
 // --- private helpers ---

@@ -482,3 +482,29 @@ func use(c *gin.Context) {
 
 	c.JSON(http.StatusOK, v1.EngineResultToResponseUse(result))
 }
+
+// context handles context requests -- this is a special method used to obtain game
+// state information necessary for LLM action mapping. It could be optimized.
+func context(c *gin.Context) {
+	sid := c.Param("sid")
+	s := safeGetSessionFromStore(sid, c)
+	if s == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	observeResult, err := s.Engine.Observe()
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+	inventoryResult, err := s.Engine.Inventory()
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, v1.EngineResultToResponseContext(observeResult, inventoryResult))
+}

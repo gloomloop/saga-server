@@ -28,6 +28,7 @@ func SetupRoutes(r *gin.Engine) {
 			sess.POST("/battle", battle)
 			sess.POST("/combine", combine)
 			sess.POST("/use", use)
+			sess.POST("/context", context)
 		}
 	}
 }

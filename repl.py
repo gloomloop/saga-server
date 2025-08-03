@@ -117,6 +117,10 @@ class GameClient:
             "POST", "use", {"item_name": item_name, "target_name": target_name}
         )
 
+    def context(self) -> Dict[str, Any]:
+        """Get comprehensive game context (room info + inventory)."""
+        return self._make_request("POST", "context")
+
     def get_session_info(self) -> Dict[str, Any]:
         """Get session information."""
         return self._make_request("GET", "")
@@ -159,6 +163,7 @@ class GameREPL(cmd.Cmd):
 ║    battle <weapon>            - Battle an enemy              ║
 ║    combine <item1> <item2>    - Combine two items            ║
 ║    use <item> <target>        - Use an item on a target      ║
+║    context                    - Get comprehensive game state ║
 ║    info                       - Show session info            ║
 ║    debug                      - Show debug information       ║
 ║    quit                       - Exit the game                ║
@@ -344,6 +349,14 @@ class GameREPL(cmd.Cmd):
         item_name, target_name = args
         try:
             response = self.client.use(item_name, target_name)
+            self.print_response(response)
+        except Exception as e:
+            print(e.response.json().get("error"))
+
+    def do_context(self, arg):
+        """Get comprehensive game context (room info + inventory)."""
+        try:
+            response = self.client.context()
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
