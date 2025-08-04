@@ -17,6 +17,7 @@ type Engine struct {
 	Rng                  Rng
 	LevelCompletionState LevelCompletionState
 	Mode                 Mode
+	ValidationDisabled   bool
 }
 
 // NewEngine creates a new engine for a level.
@@ -36,6 +37,7 @@ func NewEngine(
 		Rng:                  &DefaultRng{},
 		LevelCompletionState: LevelCompletionStateInProgress,
 		Mode:                 Investigation,
+		ValidationDisabled:   false,
 	}
 }
 
@@ -337,8 +339,10 @@ func (e *Engine) validateEngineStateForCombatActions() error {
 // Observe observes the current room.
 // Returns an ObserveResult and engine state info.
 func (e *Engine) Observe() (*ObserveResult, error) {
-	if err := e.validateEngineState(); err != nil {
-		return nil, err
+	if !e.ValidationDisabled {
+		if err := e.validateEngineState(); err != nil {
+			return nil, err
+		}
 	}
 	observeResult, err := e.observeInternal()
 	if err != nil {
@@ -440,8 +444,10 @@ func (e *Engine) Take(name string) (*TakeResult, error) {
 // Inventory returns the player's inventory.
 // Returns an InventoryResult and engine state info.
 func (e *Engine) Inventory() (*InventoryResult, error) {
-	if err := e.validateEngineState(); err != nil {
-		return nil, err
+	if !e.ValidationDisabled {
+		if err := e.validateEngineState(); err != nil {
+			return nil, err
+		}
 	}
 	inventoryResult, err := e.inventoryInternal()
 	if err != nil {
@@ -1304,6 +1310,14 @@ func (e *Engine) useInternal(itemName string, targetName string) (*useResultInte
 		ProducedItem: producedItemInfo,
 		IsComplete:   targetFixture.Fixture.IsComplete(),
 	}, nil
+}
+
+func (e *Engine) DisableValidation() {
+	e.ValidationDisabled = true
+}
+
+func (e *Engine) EnableValidation() {
+	e.ValidationDisabled = false
 }
 
 // --- RNG ---

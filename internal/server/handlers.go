@@ -495,16 +495,22 @@ func context(c *gin.Context) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Skip validation for context requests
+	s.Engine.DisableValidation()
+
 	observeResult, err := s.Engine.Observe()
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
+
 	inventoryResult, err := s.Engine.Inventory()
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
+	s.Engine.EnableValidation()
 
 	c.JSON(http.StatusOK, v1.EngineResultToResponseContext(observeResult, inventoryResult))
 }

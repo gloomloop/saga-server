@@ -111,7 +111,7 @@ type TakeRequest struct {
 
 type TakeResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	TakenItem       ItemInfo `json:"taken_item"`
+	TakenItem       ItemInfo `json:"added_to_inventory"`
 }
 
 type InventoryRequest struct{}
