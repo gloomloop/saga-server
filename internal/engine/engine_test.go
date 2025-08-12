@@ -1037,6 +1037,19 @@ func TestUnlockInternal(t *testing.T) {
 	}
 
 	// --- Test unlocking a door with a key ---
+	// Note: The key was already consumed when unlocking the box above
+	// We need to add another key to test door unlocking
+	secondKey := &world.Item{
+		BaseEntity: world.BaseEntity{
+			Name:        "test_key",
+			Description: "A test key",
+		},
+		Location: "inventory",
+		Detail:   "It might unlock something.",
+		Key:      &world.Key{},
+	}
+	engine.Player.Inventory = append(engine.Player.Inventory, secondKey)
+
 	result, err = engine.unlockInternal("test_key", "locked_door")
 	if err != nil {
 		t.Errorf("Failed to unlock door with key: %v", err)

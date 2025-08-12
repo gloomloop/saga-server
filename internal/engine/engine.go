@@ -939,6 +939,8 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 			if err != nil {
 				return nil, err
 			}
+			// Remove the key from inventory after successful use
+			e.Player.RemoveItem(keyNameOrCode)
 		}
 		return &unlockResultInternal{Unlocked: true}, nil
 	}
@@ -959,6 +961,8 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 			if err != nil {
 				return nil, err
 			}
+			// Remove the key from inventory after successful use
+			e.Player.RemoveItem(keyNameOrCode)
 		}
 		return &unlockResultInternal{Unlocked: true}, nil
 	}
