@@ -115,6 +115,7 @@ type DoorData struct {
 	RoomB           string `json:"room_b"`
 	Locked          bool   `json:"locked,omitempty"`
 	RequiredKeyName string `json:"required_key_name,omitempty"`
+	Code            string `json:"code,omitempty"`
 	Stairwell       bool   `json:"stairwell,omitempty"`
 	LatchedFrom     string `json:"latched_from,omitempty"`
 }
@@ -212,6 +213,7 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 			lock = &world.Lock{
 				Locked:  true,
 				KeyName: doorData.RequiredKeyName,
+				Code:    doorData.Code,
 			}
 		}
 

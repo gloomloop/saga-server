@@ -1187,3 +1187,117 @@ func TestLoadGame_Latches(t *testing.T) {
 		t.Errorf("Expected room Z to have 2 connections, got %d", len(roomZ.Connections))
 	}
 }
+
+func TestLoadGame_DoorCodeLocks(t *testing.T) {
+	// Test JSON data with a door that has a code lock
+	jsonData := `{
+		"name": "code lock test",
+		"floors": [
+			{
+				"name": "main floor",
+				"description": "test floor",
+				"rooms": [
+					{
+						"name": "room A",
+						"description": "first room",
+						"connections": [
+							{
+								"location": "north",
+								"door_name": "code_door"
+							}
+						]
+					},
+					{
+						"name": "room B",
+						"description": "second room",
+						"connections": [
+							{
+								"location": "south",
+								"door_name": "code_door"
+							}
+						]
+					}
+				]
+			}
+		],
+		"doors": [
+			{
+				"name": "code_door",
+				"room_a": "room A",
+				"room_b": "room B",
+				"locked": true,
+				"code": "1234"
+			}
+		]
+	}`
+
+	level, err := LoadGame([]byte(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to load game: %v", err)
+	}
+
+	// Test basic game properties
+	if level.Name != "code lock test" {
+		t.Errorf("Expected game name 'code lock test', got '%s'", level.Name)
+	}
+
+	// Test doors
+	if len(level.Doors) != 1 {
+		t.Errorf("Expected 1 door, got %d", len(level.Doors))
+	}
+
+	// Test the code door
+	codeDoor := findDoorByName(level.Doors, "code_door")
+	if codeDoor == nil {
+		t.Fatal("Could not find code_door")
+	}
+
+	if !codeDoor.IsLocked() {
+		t.Error("Expected code_door to be locked")
+	}
+
+	if !codeDoor.HasCodeLock() {
+		t.Error("Expected code_door to have a code lock")
+	}
+
+	if codeDoor.HasKeyLock() {
+		t.Error("Expected code_door to not have a key lock")
+	}
+
+	if codeDoor.Lock == nil {
+		t.Fatal("Expected code_door to have lock data")
+	}
+
+	if codeDoor.Lock.Code != "1234" {
+		t.Errorf("Expected code_door code to be '1234', got '%s'", codeDoor.Lock.Code)
+	}
+
+	if codeDoor.Lock.KeyName != "" {
+		t.Errorf("Expected code_door key name to be empty, got '%s'", codeDoor.Lock.KeyName)
+	}
+
+	// Test rooms
+	allRooms := getAllRooms(level)
+	if len(allRooms) != 2 {
+		t.Errorf("Expected 2 rooms, got %d", len(allRooms))
+	}
+
+	// Test room connections
+	roomA := findRoomByName(allRooms, "room A")
+	if roomA == nil {
+		t.Fatal("Could not find room A")
+	}
+
+	if len(roomA.Connections) != 1 {
+		t.Errorf("Expected room A to have 1 connection, got %d", len(roomA.Connections))
+	}
+
+	roomB := findRoomByName(allRooms, "room B")
+	if roomB == nil {
+		t.Fatal("Could not find room B")
+	}
+
+	if len(roomB.Connections) != 1 {
+		t.Errorf("Expected room B to have 1 connection, got %d", len(roomB.Connections))
+	}
+}
