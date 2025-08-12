@@ -3832,3 +3832,107 @@ func TestFloors_MultiFloorTraversal(t *testing.T) {
 		t.Errorf("Expected debug to show room 'room on first floor', got '%s'", debugResult.Rooms[0].Name)
 	}
 }
+
+func TestObserve_DoorLockStatusHiddenUntilTried(t *testing.T) {
+	// Create a room with a locked door
+	lockedDoor := &world.Door{
+		Name:  "locked_door",
+		RoomA: "room",
+		RoomB: "other_room",
+		Lock: &world.Lock{
+			Locked:  true,
+			KeyName: "test_key",
+		},
+		Tried: false, // Door has not been tried yet
+	}
+
+	room := &world.Room{
+		BaseEntity: world.BaseEntity{
+			Name:        "room",
+			Description: "A test room",
+		},
+		Connections: []*world.Connection{
+			{
+				DoorName: "locked_door",
+				Location: "north",
+			},
+		},
+		Items: []*world.Item{},
+	}
+
+	engine := NewEngine(&world.Level{
+		Floors: []*world.Floor{&world.Floor{
+			Name:        "test_floor",
+			Description: "A test floor",
+			Rooms:       []*world.Room{room},
+		}},
+		Doors:        []*world.Door{lockedDoor},
+		WinCondition: nil,
+	})
+
+	// Observe the room before trying the door
+	result, err := engine.Observe()
+	if err != nil {
+		t.Fatalf("Failed to observe room: %v", err)
+	}
+
+	// Should have one door
+	if len(result.Result.Doors) != 1 {
+		t.Fatalf("Expected 1 door, got %d", len(result.Result.Doors))
+	}
+
+	door := result.Result.Doors[0]
+	if door.Name != "locked_door" {
+		t.Errorf("Expected door name 'locked_door', got '%s'", door.Name)
+	}
+
+	// Lock information should be hidden before trying the door
+	if door.HasKeyLock {
+		t.Error("Expected HasKeyLock to be false before trying door")
+	}
+	if door.HasCodeLock {
+		t.Error("Expected HasCodeLock to be false before trying door")
+	}
+	if door.IsLocked {
+		t.Error("Expected IsLocked to be false before trying door")
+	}
+	if door.IsLatched {
+		t.Error("Expected IsLatched to be false before trying door")
+	}
+
+	// Now try to traverse the door (this should fail due to lock, but set Tried=true)
+	_, err = engine.Traverse("north")
+	if err == nil {
+		t.Fatal("Expected traversal to fail due to locked door")
+	}
+
+	// Observe the room again after trying the door
+	result, err = engine.Observe()
+	if err != nil {
+		t.Fatalf("Failed to observe room after trying door: %v", err)
+	}
+
+	// Should still have one door
+	if len(result.Result.Doors) != 1 {
+		t.Fatalf("Expected 1 door, got %d", len(result.Result.Doors))
+	}
+
+	door = result.Result.Doors[0]
+	if door.Name != "locked_door" {
+		t.Errorf("Expected door name 'locked_door', got '%s'", door.Name)
+	}
+
+	// Lock information should now be visible after trying the door
+	if !door.HasKeyLock {
+		t.Error("Expected HasKeyLock to be true after trying door")
+	}
+	if door.HasCodeLock {
+		t.Error("Expected HasCodeLock to be false (door has key lock, not code lock)")
+	}
+	if !door.IsLocked {
+		t.Error("Expected IsLocked to be true after trying door")
+	}
+	if door.IsLatched {
+		t.Error("Expected IsLatched to be false")
+	}
+}

@@ -39,6 +39,7 @@ type Door struct {
 	Stairwell bool // true if the door is a stairwell (connects floors)
 	Latch     *Latch
 	Traversed bool
+	Tried     bool
 }
 
 // Connection represents a door as seen from a specific room.

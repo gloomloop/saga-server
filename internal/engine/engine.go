@@ -655,15 +655,15 @@ func (e *Engine) createItemInfo(item *world.Item) ItemInfo {
 func (e *Engine) createDoorInfo(door *world.Door) DoorInfo {
 	result := DoorInfo{
 		Name:        door.Name,
-		HasKeyLock:  door.HasKeyLock(),
-		HasCodeLock: door.HasCodeLock(),
-		IsLocked:    door.IsLocked(),
 		IsStairwell: door.Stairwell,
 	}
 
-	// Handle latch status based on current room
-	if door.IsLatched() && !door.CanUnlatch(e.CurrentRoom.Name) {
-		result.IsLatched = true
+	// Only show lock and latch information if the door has been tried
+	if door.Tried {
+		result.HasKeyLock = door.HasKeyLock()
+		result.HasCodeLock = door.HasCodeLock()
+		result.IsLocked = door.IsLocked()
+		result.IsLatched = door.IsLatched()
 	}
 
 	if door.Traversed {
@@ -1123,6 +1123,9 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 		}
 	}
 
+	// Mark the door as tried before checking locks
+	door.Tried = true
+
 	// Check if the door is locked.
 	if door.IsLocked() {
 		return nil, fmt.Errorf("the %s is locked", door.Name)
@@ -1507,7 +1510,11 @@ func (d *DebugResult) PrettyPrint() string {
 		result += fmt.Sprintf("  Doors: %d\n", len(room.Doors))
 		for i, door := range room.Doors {
 			result += fmt.Sprintf("    %d. %s (%s) -> %s\n", i+1, door.Name, door.Location, door.RoomB)
-			result += fmt.Sprintf("      Locked: %t, KeyLock: %t, CodeLock: %t\n", door.IsLocked, door.HasKeyLock, door.HasCodeLock)
+			if door.HasKeyLock || door.HasCodeLock {
+				result += fmt.Sprintf("      Locked: %t, KeyLock: %t, CodeLock: %t\n", door.IsLocked, door.HasKeyLock, door.HasCodeLock)
+			} else {
+				result += fmt.Sprintf("      Lock status: unknown (not tried)\n")
+			}
 		}
 		result += "\n"
 	}
@@ -1630,18 +1637,23 @@ func (e *Engine) createDebugItemInfoPtr(item *world.Item) *DebugItemInfo {
 // createDebugDoorInfo creates a DebugDoorInfo from a world door.
 func (e *Engine) createDebugDoorInfo(door *world.Door, location string) DebugDoorInfo {
 	result := DebugDoorInfo{
-		Name:        door.Name,
-		Location:    location,
-		RoomA:       door.RoomA,
-		RoomB:       door.RoomB,
-		HasKeyLock:  door.HasKeyLock(),
-		HasCodeLock: door.HasCodeLock(),
-		IsLocked:    door.IsLocked(),
+		Name:     door.Name,
+		Location: location,
+		RoomA:    door.RoomA,
+		RoomB:    door.RoomB,
 	}
-	if door.Lock != nil {
-		result.KeyName = door.Lock.KeyName
-		result.Code = door.Lock.Code
+
+	// Only show lock information if the door has been tried
+	if door.Tried {
+		result.HasKeyLock = door.HasKeyLock()
+		result.HasCodeLock = door.HasCodeLock()
+		result.IsLocked = door.IsLocked()
+		if door.Lock != nil {
+			result.KeyName = door.Lock.KeyName
+			result.Code = door.Lock.Code
+		}
 	}
+
 	return result
 }
 
