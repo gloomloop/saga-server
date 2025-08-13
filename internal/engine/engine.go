@@ -1128,7 +1128,12 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 
 	// Check if the door is locked.
 	if door.IsLocked() {
-		return nil, fmt.Errorf("the %s is locked", door.Name)
+		if door.HasKeyLock() {
+			return nil, fmt.Errorf("the %s is locked", door.Name)
+		}
+		if door.HasCodeLock() {
+			return nil, fmt.Errorf("the %s is locked, it requires a code", door.Name)
+		}
 	}
 
 	// Check if the door is latched.
