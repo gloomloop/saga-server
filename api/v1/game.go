@@ -191,7 +191,7 @@ type ItemInfo struct {
 	IsKey        bool   `json:"is_key,omitempty"`
 	IsWeapon     bool   `json:"is_weapon,omitempty"`
 	IsContainer  bool   `json:"is_container,omitempty"`
-	IsConcealer  bool   `json:"coneals_something,omitempty"`
+	IsConcealer  bool   `json:"conceals_something,omitempty"`
 	IsAmmoBox    bool   `json:"is_ammo_box,omitempty"`
 	IsHealthItem bool   `json:"is_health_item,omitempty"`
 	HasKeyLock   bool   `json:"has_key_lock,omitempty"`

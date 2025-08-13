@@ -78,7 +78,7 @@ This repo comes with a REPL client for testing purposes.
                     "name": "tattered grey hoodie",
                     "description": "a tattered grey hoodie",
                     "location": "middle of the floor",
-                    "coneals_something": true
+                    "conceals_something": true
                 },
                 {
                     "name": "energy drink",
@@ -120,7 +120,7 @@ This repo comes with a REPL client for testing purposes.
                     "name": "dark green tarp",
                     "description": "a dark green tarp",
                     "location": "floor",
-                    "coneals_something": true
+                    "conceals_something": true
                 },
         ...
     ```
