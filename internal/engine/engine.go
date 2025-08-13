@@ -794,7 +794,6 @@ type uncoverResultInternal struct {
 // unlockResultInternal is the result of unlocking a container or door.
 type unlockResultInternal struct {
 	Unlocked bool
-	LockType string
 }
 
 // searchResultInternal is the result of searching a container.
@@ -922,19 +921,16 @@ func (e *Engine) uncoverInternal(name string) (*uncoverResultInternal, error) {
 // Unlocks a container or door with a key or code.
 func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unlockResultInternal, error) {
 	// Try to unlock a container.
-	var lockType string
 	if item, err := e.CurrentRoom.GetItem(targetName); err == nil {
 		if !item.IsContainer() {
 			return nil, fmt.Errorf("the %s is not a container", targetName)
 		}
 		if item.Container.HasCodeLock() {
-			lockType = "code"
 			err := item.Container.UnlockWithCode(keyNameOrCode)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			lockType = "key"
 			err := e.validateKey(keyNameOrCode)
 			if err != nil {
 				return nil, err
@@ -946,19 +942,17 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 			// Remove the key from inventory after successful use
 			e.Player.RemoveItem(keyNameOrCode)
 		}
-		return &unlockResultInternal{Unlocked: true, LockType: lockType}, nil
+		return &unlockResultInternal{Unlocked: true}, nil
 	}
 
 	// Try to unlock a door.
 	if door, err := e.findDoorByName(targetName); err == nil {
 		if door.HasCodeLock() {
-			lockType = "code"
 			err := door.UnlockWithCode(keyNameOrCode)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			lockType = "key"
 			err := e.validateKey(keyNameOrCode)
 			if err != nil {
 				return nil, err
@@ -970,7 +964,7 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 			// Remove the key from inventory after successful use
 			e.Player.RemoveItem(keyNameOrCode)
 		}
-		return &unlockResultInternal{Unlocked: true, LockType: lockType}, nil
+		return &unlockResultInternal{Unlocked: true}, nil
 	}
 
 	return nil, fmt.Errorf("you don't see a %s here", targetName)

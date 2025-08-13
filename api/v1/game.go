@@ -92,8 +92,7 @@ type UnlockRequest struct {
 
 type UnlockResponse struct {
 	EngineStateInfo `json:"engine_state"`
-	Unlocked        bool   `json:"unlocked"`
-	LockType        string `json:"lock_type"`
+	Unlocked        bool `json:"unlocked"`
 }
 
 type SearchRequest struct {
@@ -290,7 +289,6 @@ func EngineResultToResponseUnlock(result *engine.UnlockResult) *UnlockResponse {
 	return &UnlockResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
 		Unlocked:        result.Result.Unlocked,
-		LockType:        result.Result.LockType,
 	}
 }
 
