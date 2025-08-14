@@ -1264,6 +1264,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	if !door.Traversed {
 		door.Traversed = true
 		e.updateMinimapDataForCurrenRoom()
+		e.updateMinimapForDoor(door.Name, false)
 	}
 
 	e.CurrentRoom.Visited = true
