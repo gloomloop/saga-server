@@ -43,7 +43,7 @@
             ],
             "produces": {
               "name": "bedroom key",
-              "description": "a key that opens the bathtub drain",
+              "description": "a key that opens the bedroom door",
               "portable": true,
               "key": true
             }

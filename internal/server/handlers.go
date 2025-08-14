@@ -483,34 +483,50 @@ func use(c *gin.Context) {
 	c.JSON(http.StatusOK, v1.EngineResultToResponseUse(result))
 }
 
-// context handles context requests -- this is a special method used to obtain game
-// state information necessary for LLM action mapping. It could be optimized.
+// context returns the current room context and inventory
 func context(c *gin.Context) {
 	sid := c.Param("sid")
-	s := safeGetSessionFromStore(sid, c)
-	if s == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+	session := safeGetSessionFromStore(sid, c)
+	if session == nil {
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	session.mu.Lock()
+	defer session.mu.Unlock()
 
-	// Skip validation for context requests
-	s.Engine.DisableValidation()
-
-	observeResult, err := s.Engine.Observe()
+	observeResult, err := session.Engine.Observe()
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to observe", "details": err.Error()})
 		return
 	}
 
-	inventoryResult, err := s.Engine.Inventory()
+	inventoryResult, err := session.Engine.Inventory()
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to get inventory", "details": err.Error()})
 		return
 	}
-	s.Engine.EnableValidation()
 
-	c.JSON(http.StatusOK, v1.EngineResultToResponseContext(observeResult, inventoryResult))
+	response := v1.EngineResultToResponseContext(observeResult, inventoryResult)
+	c.JSON(http.StatusOK, response)
+}
+
+// minimap returns minimap data for the current floor
+func minimap(c *gin.Context) {
+	sid := c.Param("sid")
+	session := safeGetSessionFromStore(sid, c)
+	if session == nil {
+		return
+	}
+
+	session.mu.Lock()
+	defer session.mu.Unlock()
+
+	minimapResult, err := session.Engine.Minimap()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to get minimap", "details": err.Error()})
+		return
+	}
+
+	response := v1.EngineResultToResponseMinimap(minimapResult)
+	c.JSON(http.StatusOK, response)
 }

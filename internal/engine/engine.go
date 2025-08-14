@@ -18,13 +18,14 @@ type Engine struct {
 	LevelCompletionState LevelCompletionState
 	Mode                 Mode
 	ValidationDisabled   bool
+	MinimapData          map[string]*MinimapDoorInfo // door name -> minimap info
 }
 
 // NewEngine creates a new engine for a level.
 func NewEngine(
 	level *world.Level,
 ) *Engine {
-	return &Engine{
+	engine := &Engine{
 		Level: level,
 		Player: &world.Player{
 			Inventory: make([]*world.Item, 0),
@@ -38,7 +39,13 @@ func NewEngine(
 		LevelCompletionState: LevelCompletionStateInProgress,
 		Mode:                 Investigation,
 		ValidationDisabled:   false,
+		MinimapData:          make(map[string]*MinimapDoorInfo),
 	}
+
+	engine.initializeMinimapData()
+	engine.CurrentRoom.Visited = true
+
+	return engine
 }
 
 // Current "mode" of the game.
@@ -230,6 +237,11 @@ type CombineResult struct {
 type UseResult struct {
 	EngineStateInfo EngineStateInfo
 	Result          useResultInternal
+}
+
+type MinimapResult struct {
+	EngineStateInfo EngineStateInfo
+	Result          minimapResultInternal
 }
 
 // getEngineStateInfo returns the current engine state info.
@@ -560,7 +572,54 @@ func (e *Engine) Use(itemName string, targetName string) (*UseResult, error) {
 	}, nil
 }
 
+// Minimap returns minimap data for the current floor.
+// Returns a MinimapResult with engine state info.
+func (e *Engine) Minimap() (*MinimapResult, error) {
+	if !e.ValidationDisabled {
+		if err := e.validateEngineState(); err != nil {
+			return nil, err
+		}
+	}
+
+	minimapResult, err := e.minimapInternal()
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinimapResult{
+		EngineStateInfo: *e.getEngineStateInfo(),
+		Result:          *minimapResult,
+	}, nil
+}
+
 // --- internal helpers ---
+
+// Set doors to visible in the minimap for the current room
+func (e *Engine) updateMinimapDataForCurrenRoom() {
+	for _, conn := range e.CurrentRoom.Connections {
+		e.MinimapData[conn.DoorName].Hidden = false
+	}
+}
+
+// Set all doors to hidden with unknown lock state
+func (e *Engine) initializeMinimapData() {
+	for _, door := range e.Level.Doors {
+		e.MinimapData[door.Name] = &MinimapDoorInfo{
+			Name:   door.Name,
+			Locked: nil,
+			Hidden: true,
+		}
+	}
+	e.updateMinimapDataForCurrenRoom()
+}
+
+// updateMinimapForDoor updates the minimap data for a specific door
+func (e *Engine) updateMinimapForDoor(doorName string, locked bool) {
+	if info, exists := e.MinimapData[doorName]; exists {
+		info.Locked = &locked
+		info.Hidden = false
+	}
+}
 
 // ItemInfo contains the basic information about an item, excluding detail.
 type ItemInfo struct {
@@ -847,6 +906,12 @@ type useResultInternal struct {
 	IsComplete   bool
 }
 
+type minimapResultInternal struct {
+	Doors       []MinimapDoorInfo
+	Rooms       []MinimapRoomInfo
+	CurrentRoom string
+}
+
 // --- internal methods ---
 
 // Observe returns the current room's name, description, and visible items and doors.
@@ -966,6 +1031,7 @@ func (e *Engine) unlockInternal(keyNameOrCode string, targetName string) (*unloc
 			// Remove the key from inventory after successful use
 			e.Player.RemoveItem(keyNameOrCode)
 		}
+		e.updateMinimapForDoor(door.Name, false)
 		return &unlockResultInternal{Unlocked: true}, nil
 	}
 
@@ -1130,6 +1196,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 
 	// Check if the door is locked.
 	if door.IsLocked() {
+		e.updateMinimapForDoor(door.Name, true)
 		if door.HasKeyLock() {
 			return nil, fmt.Errorf("the %s is locked", door.Name)
 		}
@@ -1139,6 +1206,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	}
 
 	// Check if the door is latched.
+	// NOTE: latching is not currently supported in the minimap
 	var unlatched bool
 	if door.IsLatched() {
 		// Check if we can unlatch from this side
@@ -1192,8 +1260,13 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	e.CurrentRoom = destinationRoom
 	e.CurrentFloor = destinationFloor
 
-	// Mark the door as traversed
-	door.Traversed = true
+	// Mark the door as traversed and update the minimap
+	if !door.Traversed {
+		door.Traversed = true
+		e.updateMinimapDataForCurrenRoom()
+	}
+
+	e.CurrentRoom.Visited = true
 
 	// Get the observation result for the entered room (without event handling)
 	enteredRoomObs, err := e.observeInternal()
@@ -1326,6 +1399,33 @@ func (e *Engine) useInternal(itemName string, targetName string) (*useResultInte
 	}, nil
 }
 
+// minimapInternal returns minimap data for the current floor.
+func (e *Engine) minimapInternal() (*minimapResultInternal, error) {
+	result := &minimapResultInternal{
+		CurrentRoom: e.CurrentRoom.Name,
+	}
+
+	// Add all doors from minimap data
+	// Note: this returns doors from all floors
+	for doorName, doorInfo := range e.MinimapData {
+		result.Doors = append(result.Doors, MinimapDoorInfo{
+			Name:   doorName,
+			Locked: doorInfo.Locked,
+			Hidden: doorInfo.Hidden,
+		})
+	}
+
+	// Add all rooms from current floor
+	for _, room := range e.CurrentFloor.Rooms {
+		result.Rooms = append(result.Rooms, MinimapRoomInfo{
+			Name:   room.Name,
+			Hidden: !room.Visited,
+		})
+	}
+
+	return result, nil
+}
+
 func (e *Engine) DisableValidation() {
 	e.ValidationDisabled = true
 }
@@ -1348,6 +1448,21 @@ type FakeRng struct{ Value float64 }
 
 func (g *FakeRng) Float64() float64       { return g.Value }
 func (g *FakeRng) SetValue(value float64) { g.Value = value }
+
+// --- minimap structures ---
+
+// MinimapDoorInfo contains minimap information about a door
+type MinimapDoorInfo struct {
+	Name   string // door name
+	Locked *bool  // nil if unknown, true/false if known
+	Hidden bool   // true if the door should be hidden on minimap
+}
+
+// MinimapRoomInfo contains minimap information about a room
+type MinimapRoomInfo struct {
+	Name   string
+	Hidden bool
+}
 
 // --- debug structures ---
 

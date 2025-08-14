@@ -184,6 +184,30 @@ type ContextResponse struct {
 	Inventory       []ItemInfo `json:"inventory"`
 }
 
+type MinimapRequest struct{}
+
+type MinimapResponse struct {
+	EngineStateInfo `json:"engine_state"`
+	MinimapData     MinimapData `json:"minimap_data"`
+}
+
+type MinimapData struct {
+	Doors       []MinimapDoorInfo `json:"doors"`
+	Rooms       []MinimapRoomInfo `json:"rooms"`
+	CurrentRoom string            `json:"current_room"`
+}
+
+type MinimapDoorInfo struct {
+	Name   string `json:"name"`
+	Locked *bool  `json:"locked"`
+	Hidden bool   `json:"hidden"`
+}
+
+type MinimapRoomInfo struct {
+	Name   string `json:"name"`
+	Hidden bool   `json:"hidden"`
+}
+
 type ItemInfo struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
@@ -404,6 +428,30 @@ func EngineResultToResponseUse(result *engine.UseResult) *UseResponse {
 		useResponse.ProducedItem = getResponseItemInfo(result.Result.ProducedItem)
 	}
 	return useResponse
+}
+
+// engineResultToResponseMinimap translates an engine.MinimapResult to a MinimapResponse
+func EngineResultToResponseMinimap(result *engine.MinimapResult) *MinimapResponse {
+	minimapData := MinimapData{
+		CurrentRoom: result.Result.CurrentRoom,
+	}
+	for _, door := range result.Result.Doors {
+		minimapData.Doors = append(minimapData.Doors, MinimapDoorInfo{
+			Name:   door.Name,
+			Locked: door.Locked,
+			Hidden: door.Hidden,
+		})
+	}
+	for _, room := range result.Result.Rooms {
+		minimapData.Rooms = append(minimapData.Rooms, MinimapRoomInfo{
+			Name:   room.Name,
+			Hidden: room.Hidden,
+		})
+	}
+	return &MinimapResponse{
+		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
+		MinimapData:     minimapData,
+	}
 }
 
 func EngineResultToResponseContext(observeResult *engine.ObserveResult, inventoryResult *engine.InventoryResult) *ContextResponse {

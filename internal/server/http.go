@@ -29,6 +29,7 @@ func SetupRoutes(r *gin.Engine) {
 			sess.POST("/combine", combine)
 			sess.POST("/use", use)
 			sess.POST("/context", context)
+			sess.POST("/minimap", minimap)
 		}
 	}
 }

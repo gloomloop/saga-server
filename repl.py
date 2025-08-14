@@ -121,6 +121,10 @@ class GameClient:
         """Get comprehensive game context (room info + inventory)."""
         return self._make_request("POST", "context")
 
+    def minimap(self) -> Dict[str, Any]:
+        """Get minimap data for the current floor."""
+        return self._make_request("POST", "minimap")
+
     def get_session_info(self) -> Dict[str, Any]:
         """Get session information."""
         return self._make_request("GET", "")
@@ -164,6 +168,7 @@ class GameREPL(cmd.Cmd):
 ║    combine <item1> <item2>    - Combine two items            ║
 ║    use <item> <target>        - Use an item on a target      ║
 ║    context                    - Get comprehensive game state ║
+║    minimap                    - Show minimap of current floor║
 ║    info                       - Show session info            ║
 ║    debug                      - Show debug information       ║
 ║    quit                       - Exit the game                ║
@@ -357,6 +362,14 @@ class GameREPL(cmd.Cmd):
         """Get comprehensive game context (room info + inventory)."""
         try:
             response = self.client.context()
+            self.print_response(response)
+        except Exception as e:
+            print(e.response.json().get("error"))
+
+    def do_minimap(self, arg):
+        """Show minimap of the current floor."""
+        try:
+            response = self.client.minimap()
             self.print_response(response)
         except Exception as e:
             print(e.response.json().get("error"))
