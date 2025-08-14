@@ -1010,9 +1010,13 @@ func TestUnlockInternal(t *testing.T) {
 	})
 
 	// Add the key to player's inventory
-	engine.Player.Inventory = append(engine.Player.Inventory, key)
 
 	// --- Test unlocking a container with a key ---
+	_, err := engine.searchInternal("locked_box")
+	if err == nil {
+		t.Errorf("Expected error when searching locked box, got nil")
+	}
+	engine.Player.Inventory = append(engine.Player.Inventory, key)
 	result, err := engine.unlockInternal("test_key", "locked_box")
 	if err != nil {
 		t.Errorf("Failed to unlock box with key: %v", err)

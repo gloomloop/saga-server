@@ -104,6 +104,7 @@ type SearchResponse struct {
 	EngineStateInfo `json:"engine_state"`
 	ContainedItem   *ItemInfo `json:"contained_item,omitempty"`
 	IsEmpty         bool      `json:"is_empty,omitempty"`
+	Unlocked        bool      `json:"unlocked,omitempty"`
 }
 
 type TakeRequest struct {
@@ -141,6 +142,7 @@ type TraverseResponse struct {
 	EnteredRoom     RoomInfo   `json:"entered_room"`
 	ChangedFloor    *FloorInfo `json:"changed_floor,omitempty"`
 	Unlatched       bool       `json:"unlatched_door,omitempty"`
+	Unlocked        bool       `json:"unlocked_door,omitempty"`
 }
 
 type BattleRequest struct {
@@ -327,6 +329,7 @@ func EngineResultToResponseSearch(result *engine.SearchResult) *SearchResponse {
 	} else {
 		searchResponse.IsEmpty = true
 	}
+	searchResponse.Unlocked = result.Result.Unlocked
 	return searchResponse
 }
 
@@ -389,6 +392,7 @@ func EngineResultToResponseTraverse(result *engine.TraverseResult) *TraverseResp
 			Doors:           doors,
 		},
 		Unlatched: result.Result.Unlatched,
+		Unlocked:  result.Result.Unlocked,
 	}
 	if result.Result.ChangedFloor != nil {
 		traverseResponse.ChangedFloor = &FloorInfo{

@@ -1,0 +1,60 @@
+{
+    "name": "auto unlock test",
+    "rooms": [
+      {
+        "name": "bathroom",
+        "description": "a bathroom",
+        "connections": [
+          {
+            "location": "behind",
+            "door_name": "bedroom door"
+          }
+        ],
+        "items": [
+          {
+            "name": "bedroom key",
+            "description": "a key that opens the bedroom door",
+            "portable": true,
+            "key": true
+          },
+          {
+            "name": "chest key",
+            "description": "a key that opens the chest",
+            "portable": true,
+            "key": true
+          },
+          {
+            "name": "locked chest",
+            "description": "a chest that is locked",
+            "location": "middle of the floor",
+            "required_key_name": "chest key",
+            "contains": {
+              "name": "coal",
+              "description": "a lump of coal",
+              "portable": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "bedroom",
+        "description": "a bedroom",
+        "connections": [
+          {
+            "location": "to the right",
+            "door_name": "balcony door"
+          }
+        ]
+      }
+    ],
+    "doors": [
+      {
+        "name": "bedroom door",
+        "description": "a wooden door",
+        "room_a": "bathroom",
+        "room_b": "bedroom",
+        "locked": true,
+        "required_key_name": "bedroom key"
+      }
+    ]
+  }

@@ -92,20 +92,21 @@ type FixtureData struct {
 
 // ItemData represents an item in the JSON
 type ItemData struct {
-	Name         string             `json:"name"`
-	Description  string             `json:"description"`
-	Location     string             `json:"location,omitempty"`
-	Detail       string             `json:"detail,omitempty"`
-	Portable     bool               `json:"portable,omitempty"`
-	Key          bool               `json:"key,omitempty"`
-	WeaponDamage float64            `json:"weapon_damage,omitempty"`
-	Ammo         int                `json:"ammo,omitempty"`
-	WeaponName   string             `json:"weapon_name,omitempty"`
-	HealthEffect string             `json:"health_effect,omitempty"`
-	Code         string             `json:"code,omitempty"`
-	Conceals     *ItemData          `json:"conceals,omitempty"`
-	Contains     *ContainerContents `json:"contains,omitempty"`
-	Fixture      *FixtureData       `json:"fixture,omitempty"`
+	Name             string             `json:"name"`
+	Description      string             `json:"description"`
+	Location         string             `json:"location,omitempty"`
+	Detail           string             `json:"detail,omitempty"`
+	Portable         bool               `json:"portable,omitempty"`
+	Key              bool               `json:"key,omitempty"`
+	WeaponDamage     float64            `json:"weapon_damage,omitempty"`
+	Ammo             int                `json:"ammo,omitempty"`
+	WeaponName       string             `json:"weapon_name,omitempty"`
+	HealthEffect     string             `json:"health_effect,omitempty"`
+	Code             string             `json:"code,omitempty"`
+	RequiredKeyName  string             `json:"required_key_name,omitempty"`
+	Conceals         *ItemData          `json:"conceals,omitempty"`
+	Contains         *ContainerContents `json:"contains,omitempty"`
+	Fixture          *FixtureData       `json:"fixture,omitempty"`
 }
 
 // DoorData represents a door in the JSON
@@ -694,10 +695,11 @@ func createItem(itemData ItemData) (*world.Item, error) {
 		}
 
 		var lock *world.Lock
-		if itemData.Code != "" {
+		if itemData.Code != "" || itemData.RequiredKeyName != "" {
 			lock = &world.Lock{
-				Locked: true,
-				Code:   itemData.Code,
+				Locked:  true,
+				KeyName: itemData.RequiredKeyName,
+				Code:    itemData.Code,
 			}
 		}
 

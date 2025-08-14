@@ -594,6 +594,15 @@ func (e *Engine) Minimap() (*MinimapResult, error) {
 
 // --- internal helpers ---
 
+func (e *Engine) isItemInInventory(itemName string) bool {
+	for _, item := range e.Player.Inventory {
+		if item.Name == itemName {
+			return true
+		}
+	}
+	return false
+}
+
 // Set doors to visible in the minimap for the current room
 func (e *Engine) updateMinimapDataForCurrenRoom() {
 	for _, conn := range e.CurrentRoom.Connections {
@@ -861,6 +870,7 @@ type unlockResultInternal struct {
 type searchResultInternal struct {
 	ContainerName     string
 	ContainedItemInfo *ItemInfo
+	Unlocked          bool
 }
 
 // takeResultInternal is the result of taking an item.
@@ -884,6 +894,7 @@ type traverseResultInternal struct {
 	EnteredRoom  observeResultInternal
 	ChangedFloor *FloorInfo
 	Unlatched    bool
+	Unlocked     bool
 }
 
 // battleResultInternal is the result of battling an enemy.
@@ -1044,9 +1055,21 @@ func (e *Engine) searchInternal(name string) (*searchResultInternal, error) {
 	if err != nil {
 		return nil, err
 	}
+	unlocked := false
 
 	if !container.IsContainer() {
 		return nil, fmt.Errorf("the %s is not a container", name)
+	}
+
+	if container.Container.IsLocked() && container.Container.HasKeyLock() {
+		if e.isItemInInventory(container.Container.Locked.KeyName) {
+			_, err := e.unlockInternal(container.Container.Locked.KeyName, container.Name)
+			if err != nil {
+				// Should never happen
+				fmt.Println("error unlocking container", err)
+			}
+			unlocked = true
+		}
 	}
 
 	// containedItem may be nil if the container is empty
@@ -1057,6 +1080,7 @@ func (e *Engine) searchInternal(name string) (*searchResultInternal, error) {
 
 	searchResult := &searchResultInternal{
 		ContainerName: name,
+		Unlocked:      unlocked,
 	}
 
 	if containedItem != nil {
@@ -1181,6 +1205,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	var door *world.Door
 	var err error
 
+	unlocked := false
 	// Try to find the door by name first
 	door, err = e.findDoorByName(destination)
 	if err != nil {
@@ -1198,7 +1223,16 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	if door.IsLocked() {
 		e.updateMinimapForDoor(door.Name, true)
 		if door.HasKeyLock() {
-			return nil, fmt.Errorf("the %s is locked", door.Name)
+			if e.isItemInInventory(door.Lock.KeyName) {
+				_, err := e.unlockInternal(door.Lock.KeyName, door.Name)
+				if err != nil {
+					// Should never happen
+					fmt.Println("error unlocking door", err)
+				}
+				unlocked = true
+			} else {
+				return nil, fmt.Errorf("the %s is locked", door.Name)
+			}
 		}
 		if door.HasCodeLock() {
 			return nil, fmt.Errorf("the %s is locked, it requires a code", door.Name)
@@ -1278,6 +1312,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 	result := &traverseResultInternal{
 		EnteredRoom: *enteredRoomObs,
 		Unlatched:   unlatched,
+		Unlocked:    unlocked,
 	}
 
 	// Populate the changed floor info if we used a stairwell
