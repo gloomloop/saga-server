@@ -16,6 +16,7 @@ type FightingEnemy struct {
 type EngineStateInfo struct {
 	LevelCompletionState string         `json:"level_completion"`
 	Mode                 string         `json:"mode"`
+	CurrentLevel         string         `json:"current_level"`
 	CurrentFloor         string         `json:"current_floor"`
 	CurrentRoom          string         `json:"current_room"`
 	PlayerHealth         string         `json:"player_health"`
@@ -477,6 +478,7 @@ func getResponseEngineStateInfo(engineState *engine.EngineStateInfo) *EngineStat
 		LevelCompletionState: string(engineState.LevelCompletionState),
 		Mode:                 string(engineState.Mode),
 		PlayerHealth:         string(engineState.PlayerHealth),
+		CurrentLevel:         engineState.CurrentLevel.Name,
 		CurrentFloor:         engineState.CurrentFloor.Name,
 		CurrentRoom:          engineState.CurrentRoom.Name,
 	}

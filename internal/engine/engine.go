@@ -161,6 +161,7 @@ func (e *Engine) handleEvent(event *world.Event) *EngineStateChangeNotification 
 // EngineStateInfo contains general engine state info.
 type EngineStateInfo struct {
 	LevelCompletionState          LevelCompletionState
+	CurrentLevel                  *world.Level
 	CurrentFloor                  *world.Floor
 	CurrentRoom                   *world.Room
 	Mode                          Mode
@@ -236,6 +237,7 @@ func (e *Engine) getEngineStateInfo() *EngineStateInfo {
 	return &EngineStateInfo{
 		LevelCompletionState: e.LevelCompletionState,
 		Mode:                 e.Mode,
+		CurrentLevel:         e.Level,
 		CurrentFloor:         e.CurrentFloor,
 		CurrentRoom:          e.CurrentRoom,
 		PlayerHealth:         e.Player.Health,
