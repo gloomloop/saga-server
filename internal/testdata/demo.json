@@ -9,6 +9,7 @@
     {
       "name": "waiting room",
       "description": "a dilapidated waiting room",
+      "initial_description": "a dilapidated waiting room -- there is a strong odor of mildew",
       "connections": [
         {
           "location": "left",
@@ -47,6 +48,7 @@
     {
       "name": "storage room",
       "description": "a dusty storage room",
+      "initial_description": "a dusty storage room -- there is a strong odor of mildew",
       "connections": [
         {
           "location": "back",

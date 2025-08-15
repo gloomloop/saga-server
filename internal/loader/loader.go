@@ -45,10 +45,11 @@ type EventData struct {
 
 // RoomData represents a room in the JSON
 type RoomData struct {
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	Connections []ConnectionData `json:"connections,omitempty"`
-	Items       []ItemData       `json:"items,omitempty"`
+	Name               string           `json:"name"`
+	Description        string           `json:"description"`
+	InitialDescription string           `json:"initial_description,omitempty"`
+	Connections        []ConnectionData `json:"connections,omitempty"`
+	Items              []ItemData       `json:"items,omitempty"`
 }
 
 // ConnectionData represents a room connection in the JSON
@@ -171,8 +172,9 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 						Name:        roomData.Name,
 						Description: roomData.Description,
 					},
-					Connections: []*world.Connection{},
-					Items:       []*world.Item{},
+					InitialDescription: roomData.InitialDescription,
+					Connections:        []*world.Connection{},
+					Items:              []*world.Item{},
 				}
 				roomsMap[roomData.Name] = room
 				floor.Rooms = append(floor.Rooms, room)
@@ -195,8 +197,9 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 					Name:        roomData.Name,
 					Description: roomData.Description,
 				},
-				Connections: []*world.Connection{},
-				Items:       []*world.Item{},
+				InitialDescription: roomData.InitialDescription,
+				Connections:        []*world.Connection{},
+				Items:              []*world.Item{},
 			}
 			roomsMap[roomData.Name] = room
 			floor.Rooms = append(floor.Rooms, room)

@@ -189,7 +189,6 @@ class GameREPL(cmd.Cmd):
     def __init__(self, client: GameClient):
         super().__init__()
         self.client = client
-        self.print_response(self.client.observe())
 
     def parse_args(self, arg: str) -> List[str]:
         """Parse command arguments, handling quoted strings properly."""

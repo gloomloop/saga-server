@@ -43,7 +43,6 @@ func NewEngine(
 	}
 
 	engine.initializeMinimapData()
-	engine.CurrentRoom.Visited = true
 
 	return engine
 }
@@ -932,9 +931,15 @@ type minimapResultInternal struct {
 
 // Observe returns the current room's name, description, and visible items and doors.
 func (e *Engine) observeInternal() (*observeResultInternal, error) {
+	// Choose description based on whether room has been visited
+	roomDescription := e.CurrentRoom.Description
+	if !e.CurrentRoom.Visited && e.CurrentRoom.InitialDescription != "" {
+		roomDescription = e.CurrentRoom.InitialDescription
+	}
+
 	result := &observeResultInternal{
 		RoomName:        e.CurrentRoom.Name,
-		RoomDescription: e.CurrentRoom.Description,
+		RoomDescription: roomDescription,
 	}
 
 	for _, item := range e.CurrentRoom.Items {
@@ -948,6 +953,10 @@ func (e *Engine) observeInternal() (*observeResultInternal, error) {
 		doorInfo.Location = conn.Location
 		result.Doors = append(result.Doors, doorInfo)
 	}
+
+	// Mark room as visited at the end of observation
+	e.CurrentRoom.Visited = true
+
 	return result, nil
 }
 
@@ -1305,8 +1314,6 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 		e.updateMinimapDataForCurrenRoom()
 		e.updateMinimapForDoor(door.Name, false)
 	}
-
-	e.CurrentRoom.Visited = true
 
 	// Get the observation result for the entered room (without event handling)
 	enteredRoomObs, err := e.observeInternal()

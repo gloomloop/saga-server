@@ -53,9 +53,10 @@ type Connection struct {
 // Room is a location the player can occupy.
 type Room struct {
 	BaseEntity
-	Connections []*Connection
-	Items       []*Item
-	Visited     bool // true if the player has entered this room
+	InitialDescription string
+	Connections        []*Connection
+	Items              []*Item
+	Visited            bool // true if the player has entered this room
 }
 
 // ComboItem contains a combination item and the names of the required input items.
