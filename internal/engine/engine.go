@@ -728,6 +728,11 @@ func (e *Engine) createDoorInfo(door *world.Door) DoorInfo {
 		IsStairwell: door.Stairwell,
 	}
 
+	// Get the connection from the current room to get room-specific description
+	if conn, err := e.CurrentRoom.GetConnection(door.Name); err == nil {
+		result.Description = conn.Description
+	}
+
 	// Only show lock and latch information if the door has been tried
 	if door.Tried {
 		result.HasKeyLock = door.HasKeyLock()

@@ -45,8 +45,9 @@ type Door struct {
 // Connection represents a door as seen from a specific room.
 // The location is relative to the room from which it is observed.
 type Connection struct {
-	DoorName string
-	Location string
+	DoorName    string
+	Location    string
+	Description string
 }
 
 // Room is a location the player can occupy.

@@ -27,10 +27,12 @@ rooms:
         detail: "<text>NRG-9001: unleash your inner beast</text>"
         health_effect: weak
   - name: storage room
+    description_initial: a dusty storage room -- there is a strong odor of mildew
     description: a dusty storage room
     connections:
       - location: back
         door_name: storage room door
+        description: the sign says "STORAGE"
     items:
       - name: dark green tarp
         description: a dark green tarp

@@ -53,8 +53,9 @@ type RoomData struct {
 
 // ConnectionData represents a room connection in the JSON
 type ConnectionData struct {
-	Location string `json:"location"`
-	DoorName string `json:"door_name"`
+	Location    string `json:"location"`
+	DoorName    string `json:"door_name"`
+	Description string `json:"description,omitempty"`
 }
 
 // ContainerContents can be either an ItemData or the string "empty"
@@ -92,21 +93,21 @@ type FixtureData struct {
 
 // ItemData represents an item in the JSON
 type ItemData struct {
-	Name             string             `json:"name"`
-	Description      string             `json:"description"`
-	Location         string             `json:"location,omitempty"`
-	Detail           string             `json:"detail,omitempty"`
-	Portable         bool               `json:"portable,omitempty"`
-	Key              bool               `json:"key,omitempty"`
-	WeaponDamage     float64            `json:"weapon_damage,omitempty"`
-	Ammo             int                `json:"ammo,omitempty"`
-	WeaponName       string             `json:"weapon_name,omitempty"`
-	HealthEffect     string             `json:"health_effect,omitempty"`
-	Code             string             `json:"code,omitempty"`
-	RequiredKeyName  string             `json:"required_key_name,omitempty"`
-	Conceals         *ItemData          `json:"conceals,omitempty"`
-	Contains         *ContainerContents `json:"contains,omitempty"`
-	Fixture          *FixtureData       `json:"fixture,omitempty"`
+	Name            string             `json:"name"`
+	Description     string             `json:"description"`
+	Location        string             `json:"location,omitempty"`
+	Detail          string             `json:"detail,omitempty"`
+	Portable        bool               `json:"portable,omitempty"`
+	Key             bool               `json:"key,omitempty"`
+	WeaponDamage    float64            `json:"weapon_damage,omitempty"`
+	Ammo            int                `json:"ammo,omitempty"`
+	WeaponName      string             `json:"weapon_name,omitempty"`
+	HealthEffect    string             `json:"health_effect,omitempty"`
+	Code            string             `json:"code,omitempty"`
+	RequiredKeyName string             `json:"required_key_name,omitempty"`
+	Conceals        *ItemData          `json:"conceals,omitempty"`
+	Contains        *ContainerContents `json:"contains,omitempty"`
+	Fixture         *FixtureData       `json:"fixture,omitempty"`
 }
 
 // DoorData represents a door in the JSON
@@ -248,8 +249,9 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 				for _, conn := range roomData.Connections {
 					if _, exists := doorsMap[conn.DoorName]; exists {
 						connection := &world.Connection{
-							DoorName: conn.DoorName,
-							Location: conn.Location,
+							DoorName:    conn.DoorName,
+							Location:    conn.Location,
+							Description: conn.Description,
 						}
 						room.Connections = append(room.Connections, connection)
 					}
@@ -274,8 +276,9 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 			for _, conn := range roomData.Connections {
 				if _, exists := doorsMap[conn.DoorName]; exists {
 					connection := &world.Connection{
-						DoorName: conn.DoorName,
-						Location: conn.Location,
+						DoorName:    conn.DoorName,
+						Location:    conn.Location,
+						Description: conn.Description,
 					}
 					room.Connections = append(room.Connections, connection)
 				}

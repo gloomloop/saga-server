@@ -235,11 +235,11 @@ type ItemInfo struct {
 type DoorInfo struct {
 	Name        string `json:"name"`
 	Location    string `json:"location,omitempty"`
+	Description string `json:"description,omitempty"`
 	IsLocked    bool   `json:"is_locked,omitempty"`
 	HasKeyLock  bool   `json:"has_key_lock,omitempty"`
 	HasCodeLock bool   `json:"has_code_lock,omitempty"`
 	RoomName    string `json:"room_name,omitempty"`
-	IsStairwell bool   `json:"is_stairwell,omitempty"`
 	IsLatched   bool   `json:"is_locked_from_the_other_side,omitempty"`
 	LeadsTo     string `json:"leads_to,omitempty"`
 }
@@ -508,11 +508,11 @@ func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
 func getResponseDoorInfo(door *engine.DoorInfo) *DoorInfo {
 	doorInfo := &DoorInfo{
 		Name:        door.Name,
+		Description: door.Description,
 		Location:    door.Location,
 		IsLocked:    door.IsLocked,
 		HasKeyLock:  door.HasKeyLock,
 		HasCodeLock: door.HasCodeLock,
-		IsStairwell: door.IsStairwell,
 		IsLatched:   door.IsLatched,
 		LeadsTo:     door.LeadsTo,
 	}

@@ -12,7 +12,8 @@
       "connections": [
         {
           "location": "left",
-          "door_name": "storage room door"
+          "door_name": "storage room door",
+          "description": "the sign says \"STORAGE\""
         },
         {
           "location": "right",
