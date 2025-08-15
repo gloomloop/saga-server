@@ -80,8 +80,9 @@ type HealthItem struct {
 // In the future we will add event handling for fixtures, but for now they only support
 // producing items.
 type Fixture struct {
-	RequiredItems map[string]bool
-	Produces      *Item
+	RequiredItems       map[string]bool
+	Produces            *Item
+	CompletionNarrative string
 }
 
 type FixtureUseResult struct {

@@ -105,6 +105,13 @@ func (e *Engine) processTriggers(event *world.Event) *EngineStateChangeNotificat
 					stateChange := e.runEffect(&trigger.Effect)
 					return stateChange
 				}
+			case world.EventFixture:
+				fmt.Printf("EventFixture: %v\n", event)
+				fmt.Printf("Trigger: %v\n", trigger)
+				if trigger.Event.FixtureName == event.FixtureName {
+					stateChange := e.runEffect(&trigger.Effect)
+					return stateChange
+				}
 			}
 		}
 	}
@@ -165,6 +172,8 @@ func (e *Engine) handleEvent(event *world.Event) *EngineStateChangeNotification 
 	case world.EventPlayerKilled:
 		return e.handlePlayerKilled()
 	case world.EventItemTaken:
+		return e.processTriggers(event)
+	case world.EventFixture:
 		return e.processTriggers(event)
 	case world.EventRoomEntered:
 		if stateChange := e.processTriggers(event); stateChange != nil {
@@ -575,6 +584,7 @@ func (e *Engine) Combine(inputItemAName string, inputItemBName string) (*Combine
 }
 
 func (e *Engine) Use(itemName string, targetName string) (*UseResult, error) {
+	var stateChange *EngineStateChangeNotification
 	if err := e.validateEngineStateForInvestigationActions(); err != nil {
 		return nil, err
 	}
@@ -582,8 +592,16 @@ func (e *Engine) Use(itemName string, targetName string) (*UseResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	if useResult.IsComplete {
+		stateChange = e.handleEvent(&world.Event{
+			Event:       world.EventFixture,
+			FixtureName: useResult.FixtureName,
+		})
+	}
+	engineStateInfo := e.getEngineStateInfo()
+	engineStateInfo.EngineStateChangeNotification = stateChange
 	return &UseResult{
-		EngineStateInfo: *e.getEngineStateInfo(),
+		EngineStateInfo: *engineStateInfo,
 		Result:          *useResult,
 	}, nil
 }
@@ -932,10 +950,11 @@ type combineResultInternal struct {
 }
 
 type useResultInternal struct {
-	FixtureName  string
-	UsedItemName string
-	ProducedItem *ItemInfo
-	IsComplete   bool
+	FixtureName         string
+	UsedItemName        string
+	ProducedItem        *ItemInfo
+	IsComplete          bool
+	CompletionNarrative string
 }
 
 type minimapResultInternal struct {
@@ -1132,6 +1151,8 @@ func (e *Engine) takeInternal(name string) (*takeResultInternal, error) {
 			if err != nil {
 				return nil, err
 			}
+			e.CurrentRoom.RemoveItem(item.Name)
+			e.Player.Inventory = append(e.Player.Inventory, item)
 			return &takeResultInternal{ItemInfo: uncoverResult.RevealedItem}, nil
 		}
 		if !item.IsPortable() {
@@ -1456,12 +1477,18 @@ func (e *Engine) useInternal(itemName string, targetName string) (*useResultInte
 		producedItemInfo = &itemInfo
 	}
 
-	return &useResultInternal{
+	useResult := useResultInternal{
 		FixtureName:  targetName,
 		UsedItemName: itemName,
 		ProducedItem: producedItemInfo,
 		IsComplete:   targetFixture.Fixture.IsComplete(),
-	}, nil
+	}
+
+	if useResult.IsComplete {
+		useResult.CompletionNarrative = targetFixture.Fixture.CompletionNarrative
+	}
+
+	return &useResult, nil
 }
 
 // minimapInternal returns minimap data for the current floor.

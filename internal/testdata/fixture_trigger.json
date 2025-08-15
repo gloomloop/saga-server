@@ -1,0 +1,59 @@
+{
+  "name":"fixture trigger",
+  "win_condition":{
+    "event":"enemy_killed",
+    "enemy_name":"zombie"
+  },
+  "rooms":[
+    {
+      "name":"large chamber",
+      "description":"a large chamber",
+      "items":[
+        {
+          "name":"stone",
+          "description":"a stone",
+          "location":"middle of the floor next to altar 1",
+          "portable":true
+        },
+        {
+          "name":"altar 1",
+          "description":"an altar",
+          "location":"middle of the floor",
+          "fixture":{
+            "required_items":[
+              "stone"
+            ],
+            "completion_narrative":"there is a flash of light"
+          }
+        },
+        {
+          "name":"coin",
+          "description":"a coin",
+          "location":"next to altar 2",
+          "portable":true
+        },
+        {
+          "name":"altar 2",
+          "description":"another altar",
+          "location":"by the wall",
+          "fixture":{
+            "required_items":[
+              "coin"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "enemies":[
+    {
+      "name":"zombie",
+      "description":"a zombie",
+      "room":"large chamber",
+      "trigger":{
+        "event":"fixture_used",
+        "fixture_name":"altar 1"
+      }
+    }
+  ]
+}

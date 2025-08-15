@@ -91,8 +91,9 @@ func (cc *ContainerContents) UnmarshalJSON(data []byte) error {
 
 // FixtureData represents a fixture in the JSON
 type FixtureData struct {
-	RequiredItems []string  `json:"required_items"`
-	Produces      *ItemData `json:"produces"`
+	RequiredItems       []string  `json:"required_items"`
+	Produces            *ItemData `json:"produces,omitempty"`
+	CompletionNarrative string    `json:"completion_narrative,omitempty"`
 }
 
 // ItemData represents an item in the JSON
@@ -137,9 +138,10 @@ type EnemyData struct {
 
 // TriggerData represents a trigger in the JSON
 type TriggerData struct {
-	Event    string `json:"event"`
-	ItemName string `json:"item_name,omitempty"`
-	RoomName string `json:"room_name,omitempty"`
+	Event       string `json:"event"`
+	ItemName    string `json:"item_name,omitempty"`
+	RoomName    string `json:"room_name,omitempty"`
+	FixtureName string `json:"fixture_name,omitempty"`
 }
 
 // LoadGame loads a game from JSON data
@@ -343,13 +345,16 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 				eventType = world.EventItemTaken
 			case "room_entered":
 				eventType = world.EventRoomEntered
+			case "fixture_used":
+				eventType = world.EventFixture
 			}
 
 			trigger := world.Trigger{
 				Event: world.Event{
-					Event:    eventType,
-					ItemName: enemyData.Trigger.ItemName,
-					RoomName: enemyData.Trigger.RoomName,
+					Event:       eventType,
+					ItemName:    enemyData.Trigger.ItemName,
+					RoomName:    enemyData.Trigger.RoomName,
+					FixtureName: enemyData.Trigger.FixtureName,
 				},
 				Effect: world.Effect{
 					EffectType: world.EffectEnterCombat,
@@ -746,8 +751,9 @@ func createItem(itemData ItemData) (*world.Item, error) {
 		}
 
 		item.Fixture = &world.Fixture{
-			RequiredItems: requiredItems,
-			Produces:      producedItem,
+			RequiredItems:       requiredItems,
+			Produces:            producedItem,
+			CompletionNarrative: itemData.Fixture.CompletionNarrative,
 		}
 	}
 

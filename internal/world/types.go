@@ -280,13 +280,15 @@ const (
 	EventPlayerKilled EventType = "player_killed"
 	EventItemTaken    EventType = "item_taken"
 	EventRoomEntered  EventType = "room_entered"
+	EventFixture      EventType = "fixture_used" // actually: fixture completed
 )
 
 type Event struct {
-	Event     EventType
-	EnemyName string
-	RoomName  string
-	ItemName  string
+	Event       EventType
+	EnemyName   string
+	RoomName    string
+	ItemName    string
+	FixtureName string
 }
 
 type EffectType string

@@ -175,9 +175,10 @@ type UseRequest struct {
 }
 
 type UseResponse struct {
-	EngineStateInfo `json:"engine_state"`
-	AcceptedItem    bool      `json:"accepted_item"`
-	ProducedItem    *ItemInfo `json:"produced_item,omitempty"`
+	EngineStateInfo     `json:"engine_state"`
+	AcceptedItem        bool      `json:"accepted_item"`
+	ProducedItem        *ItemInfo `json:"produced_item,omitempty"`
+	CompletionNarrative string    `json:"fixture_complete_narrative,omitempty"`
 }
 
 type ContextRequest struct{}
@@ -270,6 +271,9 @@ func EngineResultToResponseObserve(result *engine.ObserveResult) *ObserveRespons
 	items := make([]ItemInfo, len(result.Result.VisibleItems))
 	for i, item := range result.Result.VisibleItems {
 		items[i] = *getResponseItemInfo(&item)
+		if item.IsPortable {
+			items[i].IsPortable = true
+		}
 	}
 	doors := make([]DoorInfo, len(result.Result.Doors))
 	for i, door := range result.Result.Doors {
@@ -297,6 +301,9 @@ func EngineResultToResponseInspect(result *engine.InspectResult) *InspectRespons
 	}
 	if result.Result.ItemInspection != nil {
 		response.ItemInfo = getResponseItemInfo(&result.Result.ItemInspection.ItemInfo)
+		if result.Result.ItemInspection.ItemInfo.Location != "inventory" && result.Result.ItemInspection.ItemInfo.IsPortable {
+			response.ItemInfo.IsPortable = true
+		}
 		response.ItemInfo.Details = result.Result.ItemInspection.Detail
 	}
 	if result.Result.DoorInspection != nil {
@@ -307,10 +314,13 @@ func EngineResultToResponseInspect(result *engine.InspectResult) *InspectRespons
 
 // engineResultToResponseUncover translates an engine.UncoverResult to an UncoverResponse
 func EngineResultToResponseUncover(result *engine.UncoverResult) *UncoverResponse {
-	return &UncoverResponse{
+	uncoverResponse := UncoverResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
-		RevealedItem:    *getResponseItemInfo(&result.Result.RevealedItem),
 	}
+	revealedItem := getResponseItemInfo(&result.Result.RevealedItem)
+	revealedItem.Location = ""
+	uncoverResponse.RevealedItem = *revealedItem
+	return &uncoverResponse
 }
 
 // engineResultToResponseUnlock translates an engine.UnlockResult to an UnlockResponse
@@ -328,6 +338,7 @@ func EngineResultToResponseSearch(result *engine.SearchResult) *SearchResponse {
 	}
 	if result.Result.ContainedItemInfo != nil {
 		searchResponse.ContainedItem = getResponseItemInfo(result.Result.ContainedItemInfo)
+		searchResponse.ContainedItem.Location = ""
 	} else {
 		searchResponse.IsEmpty = true
 	}
@@ -337,9 +348,11 @@ func EngineResultToResponseSearch(result *engine.SearchResult) *SearchResponse {
 
 // engineResultToResponseTake translates an engine.TakeResult to a TakeResponse
 func EngineResultToResponseTake(result *engine.TakeResult) *TakeResponse {
+	taken_item := getResponseItemInfo(&result.Result.ItemInfo)
+	taken_item.Location = ""
 	return &TakeResponse{
 		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
-		TakenItem:       *getResponseItemInfo(&result.Result.ItemInfo),
+		TakenItem:       *taken_item,
 	}
 }
 
@@ -348,9 +361,12 @@ func EngineResultToResponseInventory(result *engine.InventoryResult) *InventoryR
 	inventory := make([]ItemInfo, len(result.Result.Items))
 	for i, item := range result.Result.Items {
 		inventory[i] = ItemInfo{
-			Name:        item.Name,
-			Description: item.Description,
+			Name:         item.Name,
+			Description:  item.Description,
+			IsWeapon:     item.IsWeapon,
+			IsHealthItem: item.IsHealthItem,
 		}
+		inventory[i].Location = ""
 	}
 	ammo := make([]AmmoCount, len(result.Result.Ammo))
 	for i, ammoCount := range result.Result.Ammo {
@@ -379,6 +395,9 @@ func EngineResultToResponseTraverse(result *engine.TraverseResult) *TraverseResp
 	items := make([]ItemInfo, len(result.Result.EnteredRoom.VisibleItems))
 	for i, item := range result.Result.EnteredRoom.VisibleItems {
 		items[i] = *getResponseItemInfo(&item)
+		if item.IsPortable {
+			items[i].IsPortable = true
+		}
 	}
 	doors := make([]DoorInfo, len(result.Result.EnteredRoom.Doors))
 	for i, door := range result.Result.EnteredRoom.Doors {
@@ -427,8 +446,9 @@ func EngineResultToResponseCombine(result *engine.CombineResult) *CombineRespons
 // engineResultToResponseUse translates an engine.UseResult to a UseResponse
 func EngineResultToResponseUse(result *engine.UseResult) *UseResponse {
 	useResponse := &UseResponse{
-		EngineStateInfo: *getResponseEngineStateInfo(&result.EngineStateInfo),
-		AcceptedItem:    true,
+		EngineStateInfo:     *getResponseEngineStateInfo(&result.EngineStateInfo),
+		AcceptedItem:        true,
+		CompletionNarrative: result.Result.CompletionNarrative,
 	}
 	if result.Result.ProducedItem != nil {
 		useResponse.ProducedItem = getResponseItemInfo(result.Result.ProducedItem)
@@ -475,7 +495,6 @@ func getResponseItemInfo(item *engine.ItemInfo) *ItemInfo {
 		Name:         item.Name,
 		Description:  item.Description,
 		Location:     item.Location,
-		IsPortable:   item.IsPortable,
 		IsKey:        item.IsKey,
 		IsWeapon:     item.IsWeapon,
 		IsContainer:  item.IsContainer,
