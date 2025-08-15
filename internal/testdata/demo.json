@@ -2,7 +2,7 @@
   "name": "demo puzzle",
   "system_prompt_theme": "survival horror",
   "win_condition": {
-    "event": "enter_room",
+    "event": "room_entered",
     "room_name": "stairwell to roof"
   },
   "rooms": [
@@ -160,7 +160,7 @@
       "hp": 1,
       "room": "storage room",
       "trigger": {
-        "event": "take_item",
+        "event": "item_taken",
         "item_name": "iron key"
       }
     }

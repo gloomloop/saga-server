@@ -66,19 +66,10 @@ type ComboItem struct {
 	OutputItem     *Item
 }
 
-type TriggerEvent string
-
-const (
-	TriggerEventTakeItem  TriggerEvent = "take_item"
-	TriggerEventEnterRoom TriggerEvent = "enter_room"
-)
-
 // Enemy is an NPC that must be defeated to return to investigation mode.
 type Enemy struct {
 	BaseEntity
 	HP int
-	TriggerEvent
-	// RoomName string
 }
 
 // --- enemy methods ---
@@ -292,9 +283,10 @@ const (
 )
 
 type Event struct {
-	Event    EventType
-	RoomName string
-	ItemName string
+	Event     EventType
+	EnemyName string
+	RoomName  string
+	ItemName  string
 }
 
 type EffectType string

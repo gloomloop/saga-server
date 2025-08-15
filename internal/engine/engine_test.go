@@ -1359,8 +1359,7 @@ func TestBattleInternal(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		HP:           3,
-		TriggerEvent: world.TriggerEventTakeItem,
+		HP: 3,
 	}
 
 	room := &world.Room{
@@ -1550,8 +1549,7 @@ func TestBattle_WeaponDamageLogic(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		HP:           10,
-		TriggerEvent: world.TriggerEventTakeItem,
+		HP: 10,
 	}
 
 	room := &world.Room{
@@ -1736,8 +1734,7 @@ func TestEventHandling_EnterCombatOnTakeGem(t *testing.T) {
 			Name:        "goblin",
 			Description: "A sneaky goblin",
 		},
-		HP:           1,
-		TriggerEvent: world.TriggerEventTakeItem,
+		HP: 1,
 	}
 
 	// Create a trigger: taking the gem triggers combat with the goblin
@@ -1838,8 +1835,7 @@ func TestEventHandling_CombinedEvents(t *testing.T) {
 			Name:        "skeleton",
 			Description: "A rattling skeleton",
 		},
-		HP:           1,
-		TriggerEvent: world.TriggerEventTakeItem,
+		HP: 1,
 	}
 
 	// Create a trigger: taking the key triggers combat with the skeleton
@@ -2150,8 +2146,7 @@ func TestValidation_ActionNotAllowedInMode(t *testing.T) {
 			Name:        "goblin",
 			Description: "A fierce goblin",
 		},
-		HP:           1,
-		TriggerEvent: world.TriggerEventTakeItem,
+		HP: 1,
 	}
 	engine.FightingEnemy = enemy
 	engine.Mode = Combat

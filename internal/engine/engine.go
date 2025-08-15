@@ -125,6 +125,12 @@ func (e *Engine) processWinCondition(event *world.Event) *EngineStateChangeNotif
 			stateChange := EngineStateChangeLevelComplete
 			return &stateChange
 		}
+	case world.EventEnemyKilled:
+		if e.Level.WinCondition.EnemyName == event.EnemyName {
+			e.LevelCompletionState = LevelCompletionStateComplete
+			stateChange := EngineStateChangeLevelComplete
+			return &stateChange
+		}
 	}
 	return nil
 }
@@ -150,7 +156,12 @@ func (e *Engine) handlePlayerKilled() *EngineStateChangeNotification {
 func (e *Engine) handleEvent(event *world.Event) *EngineStateChangeNotification {
 	switch event.Event {
 	case world.EventEnemyKilled:
-		return e.handleEnemyKilled()
+		enemyKilled := e.handleEnemyKilled()
+		won := e.processWinCondition(event)
+		if won != nil {
+			return won
+		}
+		return enemyKilled
 	case world.EventPlayerKilled:
 		return e.handlePlayerKilled()
 	case world.EventItemTaken:
@@ -525,7 +536,8 @@ func (e *Engine) Battle(weaponName string) (*BattleResult, error) {
 	}
 	if !battleResult.EnemyAlive {
 		stateChange = e.handleEvent(&world.Event{
-			Event: world.EventEnemyKilled,
+			Event:     world.EventEnemyKilled,
+			EnemyName: battleResult.EnemyName,
 		})
 	}
 	if !battleResult.PlayerAlive {
@@ -1080,7 +1092,7 @@ func (e *Engine) searchInternal(name string) (*searchResultInternal, error) {
 			_, err := e.unlockInternal(container.Container.Locked.KeyName, container.Name)
 			if err != nil {
 				// Should never happen
-				fmt.Println("error unlocking container", err)
+				panic("error unlocking container: " + err.Error())
 			}
 			unlocked = true
 		}
@@ -1241,7 +1253,7 @@ func (e *Engine) traverseInternal(destination string) (*traverseResultInternal, 
 				_, err := e.unlockInternal(door.Lock.KeyName, door.Name)
 				if err != nil {
 					// Should never happen
-					fmt.Println("error unlocking door", err)
+					panic("error unlocking door: " + err.Error())
 				}
 				unlocked = true
 			} else {

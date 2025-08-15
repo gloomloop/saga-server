@@ -38,9 +38,10 @@ type GameData struct {
 
 // EventData represents an event in the JSON
 type EventData struct {
-	Event    string `json:"event"`
-	RoomName string `json:"room_name"`
-	ItemName string `json:"item_name"`
+	Event     string `json:"event"`
+	RoomName  string `json:"room_name,omitempty"`
+	ItemName  string `json:"item_name,omitempty"`
+	EnemyName string `json:"enemy_name,omitempty"`
 }
 
 // RoomData represents a room in the JSON
@@ -135,7 +136,8 @@ type EnemyData struct {
 // TriggerData represents a trigger in the JSON
 type TriggerData struct {
 	Event    string `json:"event"`
-	ItemName string `json:"item_name"`
+	ItemName string `json:"item_name,omitempty"`
+	RoomName string `json:"room_name,omitempty"`
 }
 
 // LoadGame loads a game from JSON data
@@ -301,23 +303,12 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 	// Create enemies
 	var enemies []*world.Enemy
 	for _, enemyData := range gameData.Enemies {
-		var triggerEvent world.TriggerEvent
-		if enemyData.Trigger != nil {
-			switch enemyData.Trigger.Event {
-			case "take_item":
-				triggerEvent = world.TriggerEventTakeItem
-			case "enter_room":
-				triggerEvent = world.TriggerEventEnterRoom
-			}
-		}
-
 		enemy := &world.Enemy{
 			BaseEntity: world.BaseEntity{
 				Name:        enemyData.Name,
 				Description: enemyData.Description,
 			},
-			HP:           enemyData.HP,
-			TriggerEvent: triggerEvent,
+			HP: enemyData.HP,
 		}
 		enemies = append(enemies, enemy)
 	}
@@ -327,13 +318,16 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 	if gameData.WinCondition != nil {
 		var eventType world.EventType
 		switch gameData.WinCondition.Event {
-		case "enter_room":
+		case "room_entered":
 			eventType = world.EventRoomEntered
+		case "enemy_killed":
+			eventType = world.EventEnemyKilled
 		}
 
 		winCondition = &world.Event{
-			Event:    eventType,
-			RoomName: gameData.WinCondition.RoomName,
+			Event:     eventType,
+			RoomName:  gameData.WinCondition.RoomName,
+			EnemyName: gameData.WinCondition.EnemyName,
 		}
 	}
 
@@ -343,9 +337,9 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 		if enemyData.Trigger != nil {
 			var eventType world.EventType
 			switch enemyData.Trigger.Event {
-			case "take_item":
+			case "item_taken":
 				eventType = world.EventItemTaken
-			case "enter_room":
+			case "room_entered":
 				eventType = world.EventRoomEntered
 			}
 
@@ -353,6 +347,7 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 				Event: world.Event{
 					Event:    eventType,
 					ItemName: enemyData.Trigger.ItemName,
+					RoomName: enemyData.Trigger.RoomName,
 				},
 				Effect: world.Effect{
 					EffectType: world.EffectEnterCombat,

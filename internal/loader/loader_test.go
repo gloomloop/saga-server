@@ -303,10 +303,6 @@ func TestLoadGame_Demo(t *testing.T) {
 		t.Errorf("Expected zombie HP to be 1, got %d", zombie.HP)
 	}
 
-	if zombie.TriggerEvent != world.TriggerEventTakeItem {
-		t.Errorf("Expected zombie trigger event to be TriggerEventTakeItem, got %s", zombie.TriggerEvent)
-	}
-
 	// Test trigger
 	if len(level.Triggers) != 1 {
 		t.Errorf("Expected 1 trigger, got %d", len(level.Triggers))
@@ -795,7 +791,7 @@ func TestLoadGame_JSONStructureValidation(t *testing.T) {
 	jsonData6 := json.RawMessage(`{
 		"name": "test game",
 		"win_condition": {
-			"event": "enter_room",
+			"event": "room_entered",
 			"room_name": "test room"
 		},
 		"rooms": [

@@ -1,7 +1,7 @@
 name: demo puzzle
 system_prompt_theme: survival horror
 win_condition:
-  event: enter_room
+  event: room_entered
   room_name: stairwell to roof
 rooms:
   - name: waiting room

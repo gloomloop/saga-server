@@ -1,0 +1,94 @@
+{
+  "name": "kill enemy win",
+  "win_condition": {
+    "event": "enemy_killed",
+    "enemy_name": "zombie"
+  },
+  "rooms": [
+    {
+      "name": "waiting room",
+      "description": "a dilapidated waiting room",
+      "connections": [
+        {
+          "location": "left",
+          "door_name": "storage room door"
+        },
+        {
+          "location": "right",
+          "door_name": "office door"
+        }
+      ],
+      "items": [
+        {
+            "name": "metal pipe",
+            "description": "a grimy metal pipe",
+            "detail": "it's better than nothing",
+            "location": "on the floor",
+            "weapon_damage": 1.0
+        }
+      ]
+    },
+    {
+      "name": "storage room",
+      "description": "a dusty storage room",
+      "connections": [
+        {
+          "location": "back",
+          "door_name": "storage room door"
+        }
+      ]
+    },
+    {
+      "name": "office",
+      "description": "a cramped office",
+      "items": [
+        {
+          "name": "stone",
+          "description": "a stone",
+          "location": "center of the room",
+          "portable": true
+        }
+      ],
+      "connections": [
+        {
+          "location": "back",
+          "door_name": "office door"
+        }
+      ]
+    }
+  ],
+  "doors": [
+    {
+      "name": "storage room door",
+      "room_a": "waiting room",
+      "room_b": "storage room"
+    },
+    {
+      "name": "office door",
+      "room_a": "waiting room",
+      "room_b": "office"
+    }
+  ],
+  "enemies": [
+    {
+      "name": "zombie",
+      "description": "a wailing zombie",
+      "hp": 1,
+      "room": "storage room",
+      "trigger": {
+        "event": "room_entered",
+        "room_name": "storage room"
+      }
+    },
+    {
+      "name": "ghoul",
+      "description": "a hideous ghoul",
+      "hp": 1,
+      "room": "office",
+      "trigger": {
+        "event": "item_taken",
+        "item_name": "stone"
+      }
+    }
+  ]
+}
