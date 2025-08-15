@@ -3,8 +3,8 @@
   "intro_narrative": "foo",
   "outro_narrative": "bar",
   "win_condition": {
-    "event": "enemy_killed",
-    "enemy_name": "zombie"
+    "event": "room_entered",
+    "room_name": "office"
   },
   "rooms": [
     {

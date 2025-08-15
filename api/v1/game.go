@@ -22,6 +22,7 @@ type EngineStateInfo struct {
 	PlayerHealth         string         `json:"player_health"`
 	FightingEnemy        *FightingEnemy `json:"fighting_enemy,omitempty"`
 	Notification         string         `json:"notification,omitempty"`
+	OutroNarrative       string         `json:"outro_narrative,omitempty"`
 }
 
 // --- session management ---
@@ -31,7 +32,8 @@ type CreateSessionRequest struct {
 }
 
 type CreateSessionResponse struct {
-	SessionID string `json:"session_id"`
+	SessionID      string `json:"session_id"`
+	IntroNarrative string `json:"intro_narrative,omitempty"`
 }
 
 type Session struct {
@@ -533,6 +535,7 @@ func getResponseEngineStateInfo(engineState *engine.EngineStateInfo) *EngineStat
 		CurrentLevel:         engineState.CurrentLevel.Name,
 		CurrentFloor:         engineState.CurrentFloor.Name,
 		CurrentRoom:          engineState.CurrentRoom.Name,
+		OutroNarrative:       engineState.OutroNarrative,
 	}
 	if engineState.FightingEnemy != nil {
 		engineStateInfo.FightingEnemy = &FightingEnemy{

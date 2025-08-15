@@ -314,13 +314,15 @@ type Floor struct {
 }
 
 type Level struct {
-	Name         string
-	Floors       []*Floor
-	Doors        []*Door
-	Enemies      []*Enemy
-	Triggers     []*Trigger
-	WinCondition *Event
-	ComboItems   []*ComboItem
+	Name           string
+	Floors         []*Floor
+	Doors          []*Door
+	Enemies        []*Enemy
+	Triggers       []*Trigger
+	WinCondition   *Event
+	ComboItems     []*ComboItem
+	IntroNarrative string
+	OutroNarrative string
 }
 
 // CombineItems crafts a new item by combining two input items.

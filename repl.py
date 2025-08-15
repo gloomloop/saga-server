@@ -36,6 +36,7 @@ class GameClient:
 
         result = response.json()
         self.session_id = result["session_id"]
+        print(f"Intro narrative: {result['intro_narrative']}")
         return self.session_id
 
     def _make_request(

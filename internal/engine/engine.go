@@ -185,6 +185,7 @@ type EngineStateInfo struct {
 	PlayerHealth                  world.HealthState
 	EngineStateChangeNotification *EngineStateChangeNotification
 	FightingEnemy                 *world.Enemy
+	OutroNarrative                string
 }
 
 // --- public wrapper results ---
@@ -256,7 +257,7 @@ type MinimapResult struct {
 
 // getEngineStateInfo returns the current engine state info.
 func (e *Engine) getEngineStateInfo() *EngineStateInfo {
-	return &EngineStateInfo{
+	engineStateInfo := EngineStateInfo{
 		LevelCompletionState: e.LevelCompletionState,
 		Mode:                 e.Mode,
 		CurrentLevel:         e.Level,
@@ -265,6 +266,10 @@ func (e *Engine) getEngineStateInfo() *EngineStateInfo {
 		PlayerHealth:         e.Player.Health,
 		FightingEnemy:        e.FightingEnemy,
 	}
+	if e.LevelCompletionState == LevelCompletionStateComplete {
+		engineStateInfo.OutroNarrative = e.Level.OutroNarrative
+	}
+	return &engineStateInfo
 }
 
 func (e *Engine) assertValidEngineState() {

@@ -20,6 +20,14 @@ func TestLoadGame_Demo(t *testing.T) {
 		t.Errorf("Expected game name 'demo puzzle', got '%s'", level.Name)
 	}
 
+	// Test intro and outro narrative (should be empty for demo.json)
+	if level.IntroNarrative != "" {
+		t.Errorf("Expected intro narrative to be empty, got '%s'", level.IntroNarrative)
+	}
+	if level.OutroNarrative != "" {
+		t.Errorf("Expected outro narrative to be empty, got '%s'", level.OutroNarrative)
+	}
+
 	// Test rooms
 	allRooms := getAllRooms(level)
 	if len(allRooms) != 4 {
@@ -1295,5 +1303,26 @@ func TestLoadGame_DoorCodeLocks(t *testing.T) {
 
 	if len(roomB.Connections) != 1 {
 		t.Errorf("Expected room B to have 1 connection, got %d", len(roomB.Connections))
+	}
+}
+
+func TestLoadGame_IntroOutroNarrative(t *testing.T) {
+	// Load the kill enemy win test game which has intro and outro narrative
+	level, err := LoadGameFromFile("../testdata/kill_enemy_win.json")
+	if err != nil {
+		t.Fatalf("Failed to load game: %v", err)
+	}
+
+	// Test intro and outro narrative
+	if level.IntroNarrative != "foo" {
+		t.Errorf("Expected intro narrative to be 'foo', got '%s'", level.IntroNarrative)
+	}
+	if level.OutroNarrative != "bar" {
+		t.Errorf("Expected outro narrative to be 'bar', got '%s'", level.OutroNarrative)
+	}
+
+	// Test that other fields are still loaded correctly
+	if level.Name != "kill enemy win" {
+		t.Errorf("Expected game name 'kill enemy win', got '%s'", level.Name)
 	}
 }

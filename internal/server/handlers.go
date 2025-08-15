@@ -76,7 +76,10 @@ func createSession(c *gin.Context) {
 	sessionStore.sessions[sid] = session
 	sessionStore.mu.Unlock()
 
-	c.JSON(http.StatusOK, v1.CreateSessionResponse{SessionID: sid})
+	c.JSON(http.StatusOK, v1.CreateSessionResponse{
+		SessionID:      sid,
+		IntroNarrative: level.IntroNarrative,
+	})
 }
 
 // listSessions returns metadata about all active sessions

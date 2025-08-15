@@ -27,13 +27,15 @@ type FloorData struct {
 }
 
 type GameData struct {
-	Name         string          `json:"name"`
-	WinCondition *EventData      `json:"win_condition"`
-	Floors       []FloorData     `json:"floors,omitempty"`
-	Rooms        []RoomData      `json:"rooms,omitempty"` // For backward compatibility
-	DoorData     []DoorData      `json:"doors"`
-	Enemies      []EnemyData     `json:"enemies"`
-	ComboItems   []ComboItemData `json:"combo_items,omitempty"`
+	Name           string          `json:"name"`
+	IntroNarrative string          `json:"intro_narrative,omitempty"`
+	OutroNarrative string          `json:"outro_narrative,omitempty"`
+	WinCondition   *EventData      `json:"win_condition"`
+	Floors         []FloorData     `json:"floors,omitempty"`
+	Rooms          []RoomData      `json:"rooms,omitempty"` // For backward compatibility
+	DoorData       []DoorData      `json:"doors"`
+	Enemies        []EnemyData     `json:"enemies"`
+	ComboItems     []ComboItemData `json:"combo_items,omitempty"`
 }
 
 // EventData represents an event in the JSON
@@ -400,13 +402,15 @@ func LoadGame(data json.RawMessage) (*world.Level, error) {
 
 	// Create level
 	level := &world.Level{
-		Name:         gameData.Name,
-		Floors:       floors,
-		Doors:        doors,
-		Enemies:      enemies,
-		Triggers:     triggers,
-		WinCondition: winCondition,
-		ComboItems:   comboItems,
+		Name:           gameData.Name,
+		IntroNarrative: gameData.IntroNarrative,
+		OutroNarrative: gameData.OutroNarrative,
+		Floors:         floors,
+		Doors:          doors,
+		Enemies:        enemies,
+		Triggers:       triggers,
+		WinCondition:   winCondition,
+		ComboItems:     comboItems,
 	}
 
 	// Validate reachability
@@ -469,7 +473,7 @@ func validateJSONStructure(data json.RawMessage) error {
 	}
 
 	// Check for optional fields (these are allowed but not required)
-	optionalFields := []string{"win_condition", "doors", "enemies", "system_prompt_theme", "combo_items"}
+	optionalFields := []string{"win_condition", "doors", "enemies", "system_prompt_theme", "combo_items", "intro_narrative", "outro_narrative"}
 
 	// Check for any unexpected fields
 	allowedFields := make(map[string]bool)
